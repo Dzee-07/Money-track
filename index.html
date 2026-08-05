@@ -72,21 +72,12 @@
   .brand .now .date{ font-size:14px; font-weight:700; }
   .brand .now .time{ font-size:12.5px; color:var(--muted); margin-top:1px; }
 
-  .banner{
-    margin-top:16px;
-    padding:14px 14px;
-    border-radius:16px;
-    background:var(--banner-bg);
-    display:none;
-    align-items:center; gap:12px;
+  .status-pill{
+    margin-top:16px; display:inline-flex; align-items:center; gap:6px;
+    padding:7px 13px; border-radius:20px; background:var(--banner-bg);
+    color:var(--purple); font-size:12px; font-weight:700; border:none; cursor:pointer;
   }
-  .banner.show{ display:flex; }
-  .banner .i-circle{
-    width:26px; height:26px; border-radius:50%; background:var(--purple);
-    color:#fff; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; flex-shrink:0;
-  }
-  .banner p{ margin:0; font-size:12.5px; color:var(--ink-soft); line-height:1.5; flex:1; }
-  .banner .cloud{ color:var(--purple-2); flex-shrink:0; }
+  .status-pill svg{ width:14px; height:14px; flex-shrink:0; }
 
   main{
     flex:1;
@@ -98,16 +89,16 @@
   /* ---- Balance hero card ---- */
   .hero{
     position:relative;
-    margin-top:18px;
-    border-radius:24px;
-    padding:24px 22px 46px;
+    margin-top:22px;
+    border-radius:26px;
+    padding:30px 24px 52px;
     background:linear-gradient(135deg, #5B4FE0 0%, #9B7CF6 100%);
     color:#fff;
     overflow:hidden;
   }
   .hero .row1{ display:flex; justify-content:space-between; align-items:flex-start; position:relative; z-index:2; }
-  .hero .label{ font-size:11.5px; letter-spacing:0.14em; text-transform:uppercase; opacity:0.75; font-weight:600; }
-  .hero .amount{ font-size:42px; font-weight:800; margin-top:6px; letter-spacing:-0.5px; font-variant-numeric:tabular-nums; }
+  .hero .label{ font-size:12.5px; letter-spacing:0.14em; text-transform:uppercase; opacity:0.75; font-weight:600; }
+  .hero .amount{ font-size:50px; font-weight:800; margin-top:8px; letter-spacing:-0.8px; font-variant-numeric:tabular-nums; }
   .hero .wallet{
     width:52px; height:52px; border-radius:16px; background:var(--card);
     box-shadow:0 8px 18px rgba(20,10,60,0.18);
@@ -345,6 +336,135 @@
     box-shadow:0 10px 24px rgba(20,10,60,0.25);
   }
   .ob-next:active{ transform:scale(0.99); }
+
+  /* ---- Currency detect/confirm ---- */
+  .curr-backdrop{
+    position:fixed; inset:0; background:rgba(27,29,41,0.45);
+    z-index:40; opacity:0; pointer-events:none; transition:opacity .25s ease;
+  }
+  .curr-backdrop.show{ opacity:1; pointer-events:auto; }
+  .curr-modal{
+    position:fixed; left:50%; top:50%; transform:translate(-50%,-50%) scale(0.96);
+    width:calc(100% - 48px); max-width:360px; z-index:41;
+    background:var(--card); border-radius:22px; padding:26px 22px;
+    box-shadow:0 20px 50px rgba(20,10,60,0.35);
+    opacity:0; pointer-events:none; transition:opacity .2s ease, transform .2s ease;
+  }
+  .curr-modal.show{ opacity:1; pointer-events:auto; transform:translate(-50%,-50%) scale(1); }
+  .curr-modal .curr-icon{
+    width:46px; height:46px; border-radius:14px; background:var(--banner-bg);
+    display:flex; align-items:center; justify-content:center; color:var(--purple);
+    font-size:20px; font-weight:800; margin-bottom:14px;
+  }
+  .curr-modal h3{ font-size:17px; font-weight:800; margin:0 0 6px; letter-spacing:-0.2px; }
+  .curr-modal p{ font-size:13px; color:var(--muted); line-height:1.5; margin:0 0 18px; }
+  .curr-yes{
+    width:100%; padding:14px; border:none; border-radius:14px; background:var(--purple);
+    color:#fff; font-family:'Inter'; font-weight:700; font-size:14.5px; cursor:pointer;
+  }
+  .curr-change{
+    width:100%; padding:12px; border:none; background:none; color:var(--purple);
+    font-family:'Inter'; font-weight:600; font-size:13px; cursor:pointer; margin-top:4px;
+  }
+  .curr-list{ max-height:250px; overflow-y:auto; margin-top:4px; border-top:1px solid var(--line); padding-top:8px; display:none; }
+  .curr-list.show{ display:block; }
+  .curr-list button{
+    width:100%; display:flex; align-items:center; gap:10px; padding:10px 6px; border:none; background:none;
+    text-align:left; font-family:'Inter'; font-size:13.5px; color:var(--ink); cursor:pointer; border-radius:10px;
+  }
+  .curr-list button:active{ background:var(--banner-bg); }
+  .curr-list .sym{ width:26px; text-align:center; font-weight:700; color:var(--purple); flex-shrink:0; }
+  .curr-list .check{ margin-left:auto; color:var(--purple); font-weight:800; }
+
+  /* ---- "sign in to sync" nudge ---- */
+  .nudge-backdrop{
+    position:fixed; inset:0; background:rgba(27,29,41,0.45);
+    z-index:40; opacity:0; pointer-events:none; transition:opacity .25s ease;
+  }
+  .nudge-backdrop.show{ opacity:1; pointer-events:auto; }
+  .nudge-modal{
+    position:fixed; left:50%; top:50%; transform:translate(-50%,-50%) scale(0.96);
+    width:calc(100% - 48px); max-width:360px; z-index:41;
+    background:var(--card); border-radius:22px; padding:26px 22px;
+    box-shadow:0 20px 50px rgba(20,10,60,0.35);
+    opacity:0; pointer-events:none; transition:opacity .2s ease, transform .2s ease;
+    text-align:center;
+  }
+  .nudge-modal.show{ opacity:1; pointer-events:auto; transform:translate(-50%,-50%) scale(1); }
+  .nudge-modal .nudge-icon{
+    width:46px; height:46px; border-radius:14px; background:var(--banner-bg);
+    display:flex; align-items:center; justify-content:center; color:var(--purple);
+    margin:0 auto 14px;
+  }
+  .nudge-modal h3{ font-size:17px; font-weight:800; margin:0 0 6px; }
+  .nudge-modal p{ font-size:13px; color:var(--muted); line-height:1.5; margin:0 0 18px; }
+  .nudge-yes{
+    width:100%; padding:14px; border:none; border-radius:14px; background:var(--purple);
+    color:#fff; font-family:'Inter'; font-weight:700; font-size:14.5px; cursor:pointer;
+  }
+  .nudge-later{
+    width:100%; padding:12px; border:none; background:none; color:var(--muted);
+    font-family:'Inter'; font-weight:600; font-size:13px; cursor:pointer; margin-top:4px;
+  }
+  .hidden-el{ display:none !important; }
+
+  /* ---- Profile ---- */
+  .profile-row{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:15px 4px; border-bottom:1px solid var(--line); cursor:pointer; background:none; border-left:none; border-right:none; border-top:none; width:100%; text-align:left; font-family:'Inter';
+  }
+  .profile-row:last-of-type{ border-bottom:none; }
+  .profile-row .pr-label{ font-size:14px; font-weight:600; color:var(--ink); }
+  .profile-row .pr-value{ font-size:13.5px; color:var(--muted); display:flex; align-items:center; gap:6px; }
+
+  /* ---- Guest / sign up / log in screen ---- */
+  .authscreen{
+    position:fixed; inset:0; max-width:480px; margin:0 auto;
+    background:linear-gradient(160deg, #5B4FE0 0%, #9B7CF6 100%);
+    z-index:45; display:flex; flex-direction:column; position:fixed;
+    opacity:1; transition:opacity .3s ease, visibility .3s ease;
+    padding:calc(48px + env(safe-area-inset-top,0px)) 26px calc(26px + var(--safe-b));
+    color:#fff; overflow-y:auto;
+  }
+  .authscreen.hidden{ opacity:0; visibility:hidden; pointer-events:none; }
+  .as-close{
+    position:absolute; top:calc(16px + env(safe-area-inset-top,0px)); right:20px;
+    width:34px; height:34px; border-radius:50%; border:none; background:rgba(255,255,255,0.16);
+    color:#fff; font-size:15px; cursor:pointer; display:flex; align-items:center; justify-content:center;
+  }
+  .as-logo{
+    width:56px; height:56px; border-radius:16px; background:rgba(255,255,255,0.16);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .as-logo svg{ width:28px; height:28px; }
+  .authscreen h1{ font-size:25px; font-weight:800; margin:20px 0 4px; letter-spacing:-0.3px; }
+  .authscreen .as-sub{ font-size:13.5px; color:rgba(255,255,255,0.8); line-height:1.5; margin-bottom:26px; max-width:320px; }
+  .as-field{ margin-bottom:12px; }
+  .as-field label{ display:block; font-size:12px; font-weight:600; color:rgba(255,255,255,0.8); margin-bottom:6px; }
+  .as-field input{
+    width:100%; padding:14px 15px; border-radius:14px; border:1px solid rgba(255,255,255,0.25);
+    background:rgba(255,255,255,0.12); color:#fff; font-family:'Inter'; font-size:15px;
+  }
+  .as-field input::placeholder{ color:rgba(255,255,255,0.55); }
+  .as-field input:focus{ outline:none; border-color:#fff; }
+  .as-msg{ font-size:12.5px; min-height:16px; margin:6px 0 2px; color:#FFD9D9; }
+  .as-primary{
+    width:100%; padding:15px; border:none; border-radius:14px; background:#fff; color:var(--purple);
+    font-family:'Inter'; font-weight:700; font-size:15px; cursor:pointer; margin-top:6px;
+  }
+  .as-primary:active{ transform:scale(0.99); }
+  .as-primary[disabled]{ opacity:0.6; }
+  .as-switch{ text-align:center; margin-top:16px; font-size:13px; color:rgba(255,255,255,0.85); }
+  .as-switch button{ background:none; border:none; color:#fff; font-weight:700; font-family:'Inter'; font-size:13px; cursor:pointer; text-decoration:underline; padding:0; }
+  .as-divider{ display:flex; align-items:center; gap:12px; margin:22px 0 14px; color:rgba(255,255,255,0.6); font-size:12px; }
+  .as-divider::before, .as-divider::after{ content:''; flex:1; height:1px; background:rgba(255,255,255,0.25); }
+  .as-oauth{
+    width:100%; padding:13px; border-radius:14px; background:#fff;
+    border:none; color:var(--ink); font-family:'Inter'; font-weight:600; font-size:14px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:10px;
+  }
+  .as-oauth:active{ transform:scale(0.99); }
+  .as-note{ font-size:12px; color:rgba(255,255,255,0.65); line-height:1.5; margin-top:14px; }
 </style>
 </head>
 <body>
@@ -383,6 +503,67 @@
   </div>
 </div>
 
+<div class="authscreen hidden" id="authscreen">
+  <button type="button" class="as-close" id="as-close">✕</button>
+  <div class="as-logo">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 012-2h13a1 1 0 011 1v2"/><path d="M3 7v11a2 2 0 002 2h14a1 1 0 001-1v-4"/><path d="M3 7a2 2 0 012 2h14"/><rect x="14" y="12" width="8" height="6" rx="1.5"/><circle cx="17.3" cy="15" r="1" fill="#fff" stroke="none"/></svg>
+  </div>
+
+  <div id="as-signed-out">
+    <h1 id="as-title">Sign up</h1>
+    <p class="as-sub" id="as-sub">Create an account to save your entries to the cloud and pick up where you left off on any device.</p>
+
+    <div class="as-field">
+      <label>Email</label>
+      <input type="email" id="as-email" autocomplete="email" placeholder="you@example.com" />
+    </div>
+    <div class="as-field">
+      <label>Password</label>
+      <input type="password" id="as-password" autocomplete="current-password" placeholder="At least 6 characters" />
+    </div>
+    <div class="as-msg" id="as-msg"></div>
+    <button type="button" class="as-primary" id="as-submit">Sign up</button>
+
+    <div class="as-switch">
+      <span id="as-switch-text">Already have an account?</span>
+      <button type="button" id="as-switch-btn">Log in</button>
+    </div>
+
+    <div class="as-divider">or continue with</div>
+    <button type="button" class="as-oauth" id="as-google-btn">
+      <svg viewBox="0 0 48 48" width="18" height="18"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.1 8 3l5.7-5.7C34.7 6 29.6 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.2-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 15.8 18.9 13 24 13c3.1 0 5.8 1.1 8 3l5.7-5.7C34.7 6 29.6 4 24 4c-7.4 0-13.8 4.1-17.1 10.1z"/><path fill="#4CAF50" d="M24 44c5.5 0 10.5-2.1 14.3-5.6l-6.6-5.6C29.5 34.7 26.9 36 24 36c-5.3 0-9.7-3.3-11.3-8l-6.6 5.1C9.9 39.6 16.4 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.1-4.1 5.4l6.6 5.6C41.5 36.6 44 30.9 44 24c0-1.2-.1-2.4-.4-3.5z"/></svg>
+      Continue with Google
+    </button>
+    <button type="button" class="as-oauth" id="as-facebook-btn">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="#1877F2"><path d="M24 12.07C24 5.4 18.63 0 12 0S0 5.4 0 12.07C0 18.1 4.39 23.09 10.13 24v-8.44H7.08v-3.49h3.05V9.41c0-3.02 1.79-4.7 4.53-4.7 1.31 0 2.68.24 2.68.24v2.97h-1.51c-1.49 0-1.95.93-1.95 1.89v2.26h3.32l-.53 3.49h-2.79V24C19.61 23.09 24 18.1 24 12.07z"/></svg>
+      Continue with Facebook
+    </button>
+    <p class="as-note">Google and Facebook sign-in need to be turned on in your Supabase project first (Authentication → Providers).</p>
+  </div>
+</div>
+
+<div class="curr-backdrop" id="curr-backdrop"></div>
+<div class="curr-modal" id="curr-modal">
+
+  <div class="curr-icon" id="curr-icon">$</div>
+  <h3 id="curr-title">Your currency is $ USD</h3>
+  <p id="curr-sub">We guessed this from your device. You can always change it later.</p>
+  <button type="button" class="curr-yes" id="curr-yes">Yes, that's right</button>
+  <button type="button" class="curr-change" id="curr-change-btn">Choose a different currency</button>
+  <div class="curr-list" id="curr-list"></div>
+</div>
+
+<div class="nudge-backdrop" id="nudge-backdrop"></div>
+<div class="nudge-modal" id="nudge-modal">
+  <div class="nudge-icon">
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18a4 4 0 01-.6-7.96A5.5 5.5 0 0117 9.5 4 4 0 0117 18H7z"/></svg>
+  </div>
+  <h3>Sync your data online</h3>
+  <p>You're using Passbook as a guest — your entries only live on this device. Sign in so they follow you anywhere and never get lost.</p>
+  <button type="button" class="nudge-yes" id="nudge-signin-btn">Log in / Sign up</button>
+  <button type="button" class="nudge-later" id="nudge-later-btn">Not now</button>
+</div>
+
 <div class="app">
 
   <header class="top">
@@ -394,17 +575,10 @@
         </div>
       </div>
       <div class="right" style="display:flex; align-items:center; gap:12px;">
-        <div class="now">
-          <div class="date" id="header-date">—</div>
-          <div class="time" id="header-time">—</div>
-        </div>
+        <button type="button" class="icon-btn" id="profile-btn" aria-label="Profile">
+          <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21a8 8 0 10-16 0"/><circle cx="12" cy="7" r="4"/></svg>
+        </button>
       </div>
-    </div>
-
-    <div class="banner" id="conn-banner">
-      <div class="i-circle">i</div>
-      <p>Not connected to Supabase yet — entries are kept in this session only. Add your project keys in the code to save them for good.</p>
-      <svg class="cloud" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 18a4 4 0 01-.6-7.96A5.5 5.5 0 0117 9.5 4 4 0 0117 18H7z"/><path d="M3 3l18 18"/></svg>
     </div>
   </header>
 
@@ -565,6 +739,31 @@
     </form>
   </div>
 
+  <div class="sheet-backdrop" id="profile-backdrop"></div>
+  <div class="sheet" id="profile-sheet" role="dialog" aria-modal="true" aria-label="Profile">
+    <div class="sheet-handle"></div>
+    <div class="section-head" style="margin-top:2px;">
+      <h2>Profile</h2>
+      <button type="button" class="link" id="profile-close">Close</button>
+    </div>
+    <button type="button" class="profile-row" id="profile-login-row">
+      <span class="pr-label">Login</span>
+      <span class="pr-value">Guest — tap to sync your data ›</span>
+    </button>
+    <div class="profile-row" id="profile-account-row" style="cursor:default;">
+      <span class="pr-label">Account</span>
+      <span class="pr-value" id="profile-account-label"></span>
+    </div>
+    <button type="button" class="profile-row" id="profile-currency-row">
+      <span class="pr-label">Change currency</span>
+      <span class="pr-value"><span id="profile-currency-label">$ USD</span> ›</span>
+    </button>
+    <button type="button" class="profile-row" id="profile-logout-row">
+      <span class="pr-label" style="color:var(--expense);">Logout</span>
+      <span class="pr-value">›</span>
+    </button>
+  </div>
+
 </div>
 
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
@@ -583,12 +782,40 @@ if (CONFIGURED && window.supabase && window.supabase.createClient) {
   try { db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); }
   catch (e) { console.error('Supabase init failed:', e); db = null; }
 }
-// Session-only fallback used whenever `db` isn't available (not configured,
-// or the Supabase script failed to load) so the app always stays usable.
-let localTxns = [];
-let localId = 1;
 
-const SYMBOL = '$';
+// ---------- account mode: 'guest' (this device only) or 'cloud' (Supabase auth) ----------
+const GUEST_KEY = 'passbook_guest_txns';
+const GUEST_ID_KEY = 'passbook_guest_next_id';
+let mode = null;          // 'guest' | 'cloud' — set once we know
+let currentUser = null;   // Supabase auth user, when in cloud mode
+
+function readGuestTxns(){
+  try{ return JSON.parse(localStorage.getItem(GUEST_KEY) || '[]'); }
+  catch(e){ return []; }
+}
+function writeGuestTxns(list){
+  try{ localStorage.setItem(GUEST_KEY, JSON.stringify(list)); }catch(e){ /* storage unavailable — non-critical */ }
+}
+function nextGuestId(){
+  let n = 1;
+  try{ n = parseInt(localStorage.getItem(GUEST_ID_KEY) || '1', 10) || 1; }catch(e){}
+  try{ localStorage.setItem(GUEST_ID_KEY, String(n+1)); }catch(e){}
+  return 'guest-' + n;
+}
+function setStatusPill(){
+  const isCloud = mode === 'cloud' && currentUser;
+  const loginRow = document.getElementById('profile-login-row');
+  const acctRow = document.getElementById('profile-account-row');
+  const logoutRow = document.getElementById('profile-logout-row');
+  const acctLabel = document.getElementById('profile-account-label');
+  if(loginRow) loginRow.classList.toggle('hidden-el', isCloud);
+  if(acctRow) acctRow.classList.toggle('hidden-el', !isCloud);
+  if(logoutRow) logoutRow.classList.toggle('hidden-el', !isCloud);
+  if(acctLabel) acctLabel.textContent = isCloud ? currentUser.email : '';
+}
+
+let SYMBOL = '$';
+let CURRENCY_CODE = 'USD';
 const CATEGORY_BG = {
   Food:'#FCE4EC', Transport:'#E3F2FD', Bills:'#FFF3E0', Shopping:'#F3E8FF',
   Health:'#FDE8E8', Entertainment:'#FFF9DB', Education:'#E0F7F5',
@@ -667,52 +894,54 @@ function inRange(txn, start, end){
 
 // ---------- data ----------
 async function loadTransactions(){
-  if(!db){ transactions = [...localTxns]; renderAll(); return; }
+  if(mode !== 'cloud' || !db){
+    transactions = readGuestTxns();
+    renderAll();
+    return;
+  }
   try{
     const { data, error } = await db
       .from('transactions')
       .select('*')
+      .eq('user_id', currentUser.id)
       .order('occurred_at', { ascending:false });
     if(error) throw error;
     transactions = data || [];
   }catch(e){
-    console.error('Falling back to local storage:', e);
-    db = null;
-    showBanner();
-    transactions = [...localTxns];
+    console.error('Could not load from Supabase:', e);
+    transactions = [];
   }
   renderAll();
 }
 
 async function addTransaction({type, category, note, amount, occurred_at}){
-  if(!db){
-    localTxns.unshift({ id:String(localId++), type, category, note: note||null, amount, occurred_at });
+  if(mode !== 'cloud' || !db){
+    const list = readGuestTxns();
+    list.unshift({ id: nextGuestId(), type, category, note: note||null, amount, occurred_at });
+    writeGuestTxns(list);
     await loadTransactions();
     return;
   }
   try{
     const { error } = await db.from('transactions').insert({
-      type, category, note: note || null, amount, occurred_at
+      type, category, note: note || null, amount, occurred_at, user_id: currentUser.id
     });
     if(error) throw error;
     await loadTransactions();
   }catch(e){
-    console.error('Insert failed, saving locally instead:', e);
-    db = null;
-    showBanner();
-    localTxns.unshift({ id:String(localId++), type, category, note: note||null, amount, occurred_at });
-    await loadTransactions();
+    console.error('Insert failed:', e);
+    alert('Could not save to your account — check your connection and try again.');
   }
 }
 
 async function deleteTransaction(id){
-  if(!db){
-    localTxns = localTxns.filter(t=>t.id!==id);
+  if(mode !== 'cloud' || !db){
+    writeGuestTxns(readGuestTxns().filter(t=>t.id!==id));
     await loadTransactions();
     return;
   }
   try{
-    const { error } = await db.from('transactions').delete().eq('id', id);
+    const { error } = await db.from('transactions').delete().eq('id', id).eq('user_id', currentUser.id);
     if(error) throw error;
   }catch(e){
     console.error(e);
@@ -720,9 +949,19 @@ async function deleteTransaction(id){
   await loadTransactions();
 }
 
-function showBanner(){
-  const b = document.getElementById('conn-banner');
-  if(b) b.classList.add('show');
+// Copies any entries made as a guest on this device into the signed-in
+// account, then clears the local guest copy so they aren't duplicated.
+async function migrateGuestToCloud(){
+  const guestList = readGuestTxns();
+  if(!guestList.length || !db || !currentUser) return;
+  try{
+    const rows = guestList.map(({id, ...rest}) => ({ ...rest, user_id: currentUser.id }));
+    const { error } = await db.from('transactions').insert(rows);
+    if(error) throw error;
+    writeGuestTxns([]);
+  }catch(e){
+    console.error('Guest data migration failed — keeping it saved locally for now:', e);
+  }
 }
 
 // ---------- rendering ----------
@@ -874,6 +1113,24 @@ document.getElementById('fab-add-btn').addEventListener('click', openAddSheet);
 document.getElementById('sheet-close').addEventListener('click', closeAddSheet);
 backdropEl.addEventListener('click', closeAddSheet);
 
+// ---------- profile overlay sheet ----------
+const profileSheetEl = document.getElementById('profile-sheet');
+const profileBackdropEl = document.getElementById('profile-backdrop');
+function openProfileSheet(){
+  profileSheetEl.classList.add('open');
+  profileBackdropEl.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeProfileSheet(){
+  profileSheetEl.classList.remove('open');
+  profileBackdropEl.classList.remove('open');
+  document.body.style.overflow = '';
+}
+document.getElementById('profile-btn').addEventListener('click', openProfileSheet);
+document.getElementById('profile-close').addEventListener('click', closeProfileSheet);
+profileBackdropEl.addEventListener('click', closeProfileSheet);
+document.getElementById('profile-currency-row').addEventListener('click', openCurrencyModal);
+
 // type toggle
 document.getElementById('type-expense').addEventListener('click', ()=>{
   currentType='expense';
@@ -969,6 +1226,202 @@ function tickClock(){
   if(htEl) htEl.textContent = timeStr;
 }
 
+// ---------- currency: auto-detected on first launch, always changeable manually, synced to Supabase when signed in ----------
+const CURRENCY_KEY = 'passbook_currency';
+const COUNTRY_CURRENCY = {
+  US:['USD','$','US Dollar'], PH:['PHP','₱','Philippine Peso'], GB:['GBP','£','British Pound'],
+  CA:['CAD','$','Canadian Dollar'], AU:['AUD','$','Australian Dollar'], NZ:['NZD','$','New Zealand Dollar'],
+  IN:['INR','₹','Indian Rupee'], JP:['JPY','¥','Japanese Yen'], CN:['CNY','¥','Chinese Yuan'],
+  KR:['KRW','₩','South Korean Won'], SG:['SGD','$','Singapore Dollar'], MY:['MYR','RM','Malaysian Ringgit'],
+  ID:['IDR','Rp','Indonesian Rupiah'], TH:['THB','฿','Thai Baht'], VN:['VND','₫','Vietnamese Dong'],
+  HK:['HKD','$','Hong Kong Dollar'], TW:['TWD','$','New Taiwan Dollar'], BN:['BND','$','Brunei Dollar'],
+  MO:['MOP','P','Macanese Pataca'], KH:['KHR','៛','Cambodian Riel'], LA:['LAK','₭','Laotian Kip'],
+  MM:['MMK','K','Myanmar Kyat'],
+  DE:['EUR','€','Euro'], FR:['EUR','€','Euro'], IT:['EUR','€','Euro'], ES:['EUR','€','Euro'],
+  NL:['EUR','€','Euro'], BE:['EUR','€','Euro'], AT:['EUR','€','Euro'], IE:['EUR','€','Euro'],
+  PT:['EUR','€','Euro'], FI:['EUR','€','Euro'], GR:['EUR','€','Euro'], LU:['EUR','€','Euro'],
+  SK:['EUR','€','Euro'], SI:['EUR','€','Euro'], EE:['EUR','€','Euro'], LV:['EUR','€','Euro'],
+  LT:['EUR','€','Euro'], CY:['EUR','€','Euro'], MT:['EUR','€','Euro'], HR:['EUR','€','Euro'],
+  CH:['CHF','Fr','Swiss Franc'], SE:['SEK','kr','Swedish Krona'], NO:['NOK','kr','Norwegian Krone'],
+  DK:['DKK','kr','Danish Krone'], IS:['ISK','kr','Icelandic Krona'], PL:['PLN','zł','Polish Zloty'],
+  CZ:['CZK','Kč','Czech Koruna'], HU:['HUF','Ft','Hungarian Forint'], RO:['RON','lei','Romanian Leu'],
+  BG:['BGN','лв','Bulgarian Lev'], RU:['RUB','₽','Russian Ruble'], UA:['UAH','₴','Ukrainian Hryvnia'],
+  TR:['TRY','₺','Turkish Lira'], IL:['ILS','₪','Israeli Shekel'],
+  AE:['AED','د.إ','UAE Dirham'], SA:['SAR','﷼','Saudi Riyal'], QA:['QAR','﷼','Qatari Riyal'],
+  KW:['KWD','د.ك','Kuwaiti Dinar'], EG:['EGP','£','Egyptian Pound'],
+  ZA:['ZAR','R','South African Rand'], NG:['NGN','₦','Nigerian Naira'], KE:['KES','KSh','Kenyan Shilling'],
+  GH:['GHS','₵','Ghanaian Cedi'],
+  MX:['MXN','$','Mexican Peso'], BR:['BRL','R$','Brazilian Real'], AR:['ARS','$','Argentine Peso'],
+  CL:['CLP','$','Chilean Peso'], CO:['COP','$','Colombian Peso'], PE:['PEN','S/','Peruvian Sol'],
+  PK:['PKR','₨','Pakistani Rupee'], BD:['BDT','৳','Bangladeshi Taka'], LK:['LKR','₨','Sri Lankan Rupee'],
+  NP:['NPR','₨','Nepalese Rupee'], FJ:['FJD','$','Fijian Dollar'],
+};
+const CURRENCY_PICKER_LIST = [
+  ['USD','$','US Dollar'], ['PHP','₱','Philippine Peso'], ['EUR','€','Euro'], ['GBP','£','British Pound'],
+  ['CAD','$','Canadian Dollar'], ['AUD','$','Australian Dollar'], ['INR','₹','Indian Rupee'],
+  ['JPY','¥','Japanese Yen'], ['CNY','¥','Chinese Yuan'], ['KRW','₩','South Korean Won'],
+  ['SGD','$','Singapore Dollar'], ['MYR','RM','Malaysian Ringgit'], ['IDR','Rp','Indonesian Rupiah'],
+  ['THB','฿','Thai Baht'], ['VND','₫','Vietnamese Dong'], ['HKD','$','Hong Kong Dollar'],
+  ['TWD','$','New Taiwan Dollar'], ['CHF','Fr','Swiss Franc'], ['SEK','kr','Swedish Krona'],
+  ['NOK','kr','Norwegian Krone'], ['DKK','kr','Danish Krone'], ['PLN','zł','Polish Zloty'],
+  ['RUB','₽','Russian Ruble'], ['TRY','₺','Turkish Lira'], ['ILS','₪','Israeli Shekel'],
+  ['AED','د.إ','UAE Dirham'], ['SAR','﷼','Saudi Riyal'], ['ZAR','R','South African Rand'],
+  ['NGN','₦','Nigerian Naira'], ['MXN','$','Mexican Peso'], ['BRL','R$','Brazilian Real'],
+  ['PKR','₨','Pakistani Rupee'], ['BDT','৳','Bangladeshi Taka'],
+];
+const TZ_COUNTRY = {
+  'Asia/Manila':'PH','America/New_York':'US','America/Chicago':'US','America/Denver':'US','America/Los_Angeles':'US',
+  'America/Anchorage':'US','Pacific/Honolulu':'US','Europe/London':'GB','America/Toronto':'CA','America/Vancouver':'CA',
+  'Australia/Sydney':'AU','Australia/Melbourne':'AU','Australia/Perth':'AU','Pacific/Auckland':'NZ',
+  'Asia/Kolkata':'IN','Asia/Calcutta':'IN','Asia/Tokyo':'JP','Asia/Shanghai':'CN','Asia/Seoul':'KR',
+  'Asia/Singapore':'SG','Asia/Kuala_Lumpur':'MY','Asia/Jakarta':'ID','Asia/Bangkok':'TH','Asia/Ho_Chi_Minh':'VN',
+  'Asia/Hong_Kong':'HK','Asia/Taipei':'TW','Europe/Berlin':'DE','Europe/Paris':'FR','Europe/Rome':'IT',
+  'Europe/Madrid':'ES','Europe/Amsterdam':'NL','Europe/Brussels':'BE','Europe/Vienna':'AT','Europe/Dublin':'IE',
+  'Europe/Lisbon':'PT','Europe/Athens':'GR','Europe/Zurich':'CH','Europe/Stockholm':'SE','Europe/Oslo':'NO',
+  'Europe/Copenhagen':'DK','Europe/Warsaw':'PL','Europe/Prague':'CZ','Europe/Budapest':'HU','Europe/Bucharest':'RO',
+  'Europe/Moscow':'RU','Europe/Kiev':'UA','Europe/Istanbul':'TR','Asia/Jerusalem':'IL','Asia/Dubai':'AE',
+  'Asia/Riyadh':'SA','Asia/Qatar':'QA','Asia/Kuwait':'KW','Africa/Cairo':'EG','Africa/Johannesburg':'ZA',
+  'Africa/Lagos':'NG','Africa/Nairobi':'KE','Africa/Accra':'GH','America/Mexico_City':'MX','America/Sao_Paulo':'BR',
+  'America/Argentina/Buenos_Aires':'AR','America/Santiago':'CL','America/Bogota':'CO','America/Lima':'PE',
+  'Asia/Karachi':'PK','Asia/Dhaka':'BD','Asia/Colombo':'LK','Asia/Kathmandu':'NP',
+};
+
+function currencyIcon(code, symbol){
+  const el = document.getElementById('curr-icon');
+  if(el) el.textContent = symbol.length <= 2 ? symbol : code.slice(0,2);
+}
+// Saves the choice locally always (so it loads instantly next time), and to
+// Supabase too when signed in, so it follows the person across devices.
+function setCurrency(code, symbol, name, {persist=true, render=true, sync=true} = {}){
+  SYMBOL = symbol; CURRENCY_CODE = code;
+  if(persist){ try{ localStorage.setItem(CURRENCY_KEY, JSON.stringify({code, symbol, name})); }catch(e){} }
+  const pillLabel = document.getElementById('profile-currency-label');
+  if(pillLabel) pillLabel.textContent = `${symbol} ${code}`;
+  if(render) renderAll();
+  if(sync && mode === 'cloud' && db && currentUser) syncCurrencyToCloud(code, symbol, name);
+}
+function loadSavedCurrency(){
+  try{
+    const raw = localStorage.getItem(CURRENCY_KEY);
+    if(!raw) return null;
+    const v = JSON.parse(raw);
+    if(v && v.code && v.symbol) return v;
+  }catch(e){}
+  return null;
+}
+async function syncCurrencyToCloud(code, symbol, name){
+  try{
+    const { error } = await db.from('user_settings').upsert({
+      user_id: currentUser.id, currency_code: code, currency_symbol: symbol, currency_name: name,
+    });
+    if(error) throw error;
+  }catch(e){ console.error('Could not sync currency to Supabase:', e); }
+}
+async function loadCurrencyFromCloud(){
+  try{
+    const { data, error } = await db.from('user_settings').select('*').eq('user_id', currentUser.id).maybeSingle();
+    if(error) throw error;
+    if(data && data.currency_code){
+      setCurrency(data.currency_code, data.currency_symbol, data.currency_name, {sync:false});
+      return true;
+    }
+  }catch(e){ console.error('Could not load currency from Supabase:', e); }
+  return false;
+}
+function localeCountryGuess(){
+  try{
+    const loc = new Intl.Locale(navigator.language);
+    if(loc.region) return loc.region;
+  }catch(e){}
+  const parts = (navigator.language || '').split('-');
+  if(parts.length > 1 && parts[1].length === 2) return parts[1].toUpperCase();
+  return null;
+}
+function timezoneCountryGuess(){
+  try{
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    return TZ_COUNTRY[tz] || null;
+  }catch(e){ return null; }
+}
+async function ipCountryGuess(){
+  try{
+    const ctrl = new AbortController();
+    const timer = setTimeout(()=>ctrl.abort(), 2500);
+    const res = await fetch('https://get.geojs.io/v1/ip/country.json', { signal: ctrl.signal });
+    clearTimeout(timer);
+    const data = await res.json();
+    return (data && (data.country || data.country_code)) || null;
+  }catch(e){ return null; }
+}
+function renderCurrencyList(){
+  const list = document.getElementById('curr-list');
+  list.innerHTML = CURRENCY_PICKER_LIST.map(([code,symbol,name])=>
+    `<button type="button" data-code="${code}" data-symbol="${symbol}" data-name="${name}">
+      <span class="sym">${symbol}</span>${name} · ${code}
+      ${code===CURRENCY_CODE ? '<span class="check">✓</span>' : ''}
+    </button>`
+  ).join('');
+}
+// First-launch card: shows the guessed currency with Yes / choose-different.
+function openCurrencyConfirm(code, symbol, name){
+  currencyIcon(code, symbol);
+  document.getElementById('curr-title').textContent = `Your currency is ${symbol} ${code}`;
+  document.getElementById('curr-sub').textContent = `We guessed ${name} from your device. You can always change it later from your profile.`;
+  document.getElementById('curr-yes').classList.remove('hidden-el');
+  document.getElementById('curr-change-btn').classList.remove('hidden-el');
+  document.getElementById('curr-list').classList.remove('show');
+  document.getElementById('curr-yes').onclick = ()=>{ setCurrency(code, symbol, name); closeCurrencyModal(); maybeShowSyncNudge(); };
+  renderCurrencyList();
+  document.getElementById('curr-backdrop').classList.add('show');
+  document.getElementById('curr-modal').classList.add('show');
+}
+// Manual picker (opened from Profile): straight to the full list, no guessing.
+function openCurrencyModal(){
+  currencyIcon(CURRENCY_CODE, SYMBOL);
+  document.getElementById('curr-title').textContent = 'Choose your currency';
+  document.getElementById('curr-sub').textContent = "Pick the currency you'd like to track your money in. You can change this anytime from your profile.";
+  document.getElementById('curr-yes').classList.add('hidden-el');
+  document.getElementById('curr-change-btn').classList.add('hidden-el');
+  renderCurrencyList();
+  document.getElementById('curr-list').classList.add('show');
+  document.getElementById('curr-backdrop').classList.add('show');
+  document.getElementById('curr-modal').classList.add('show');
+}
+function closeCurrencyModal(){
+  document.getElementById('curr-backdrop').classList.remove('show');
+  document.getElementById('curr-modal').classList.remove('show');
+}
+document.getElementById('curr-backdrop').addEventListener('click', closeCurrencyModal);
+document.getElementById('curr-change-btn').addEventListener('click', ()=> document.getElementById('curr-list').classList.add('show'));
+document.getElementById('curr-list').addEventListener('click', (e)=>{
+  const btn = e.target.closest('button[data-code]');
+  if(!btn) return;
+  setCurrency(btn.dataset.code, btn.dataset.symbol, btn.dataset.name);
+  closeCurrencyModal();
+});
+// First launch only: guess (region/timezone, refined by a quick IP lookup)
+// and ask for confirmation. For a signed-in user, prefer whatever's already
+// saved in Supabase over guessing again. Once confirmed — or changed later
+// from Profile — it's saved for good and never re-asked automatically,
+// including when traveling or switching networks.
+async function offerCurrencyChoiceIfNeeded(){
+  if(mode === 'cloud' && db && currentUser){
+    const foundInCloud = await loadCurrencyFromCloud();
+    if(foundInCloud) return;
+  }
+  const saved = loadSavedCurrency();
+  if(saved){
+    setCurrency(saved.code, saved.symbol, saved.name, {render:false});
+    maybeShowSyncNudge();
+    return;
+  }
+  let country = localeCountryGuess() || timezoneCountryGuess();
+  const ipCountry = await ipCountryGuess();
+  if(ipCountry) country = ipCountry;
+  const [code, symbol, name] = COUNTRY_CURRENCY[country] || ['USD','$','US Dollar'];
+  openCurrencyConfirm(code, symbol, name);
+}
+
 // ---------- one-time welcome / onboarding ----------
 const OB_KEY = 'passbook_onboarding_seen';
 const OB_SLIDES = 3;
@@ -989,6 +1442,7 @@ function renderOnboarding(){
 function finishOnboarding(){
   markOnboardingSeen();
   document.getElementById('onboarding').classList.add('hidden');
+  resolveAuthState();
 }
 document.getElementById('ob-next').addEventListener('click', ()=>{
   if(obIndex < OB_SLIDES-1){ obIndex++; renderOnboarding(); }
@@ -1011,19 +1465,169 @@ document.querySelectorAll('#ob-dots .ob-dot').forEach((dot,i)=>{
     startX = null;
   }, {passive:true});
 })();
-if(hasSeenOnboarding()){ document.getElementById('onboarding').classList.add('hidden'); }
 renderOnboarding();
+const skippedOnboarding = hasSeenOnboarding();
+if(skippedOnboarding){ document.getElementById('onboarding').classList.add('hidden'); }
+
+// ---------- guest / sign up / log in ----------
+const AUTH_CHOICE_KEY = 'passbook_auth_choice';
+const NUDGE_SHOWN_KEY = 'passbook_sync_nudge_shown';
+let isLoginMode = false;
+
+function setAuthMode(loginMode){
+  isLoginMode = loginMode;
+  document.getElementById('as-title').textContent = loginMode ? 'Log in' : 'Sign up';
+  document.getElementById('as-sub').textContent = loginMode
+    ? 'Welcome back — log in to see your synced entries.'
+    : 'Create an account to save your entries to the cloud and pick up where you left off on any device.';
+  document.getElementById('as-submit').textContent = loginMode ? 'Log in' : 'Sign up';
+  document.getElementById('as-switch-text').textContent = loginMode ? "Don't have an account?" : 'Already have an account?';
+  document.getElementById('as-switch-btn').textContent = loginMode ? 'Sign up' : 'Log in';
+  document.getElementById('as-msg').textContent = '';
+}
+document.getElementById('as-switch-btn').addEventListener('click', ()=> setAuthMode(!isLoginMode));
+document.getElementById('as-close').addEventListener('click', ()=> document.getElementById('authscreen').classList.add('hidden'));
+
+document.getElementById('as-google-btn').addEventListener('click', async ()=>{
+  const msg = document.getElementById('as-msg');
+  if(!CONFIGURED || !db){ msg.style.color = '#FFD9D9'; msg.textContent = 'Supabase isn\'t connected yet — add your project keys in the code first.'; return; }
+  try{ const { error } = await db.auth.signInWithOAuth({ provider: 'google' }); if(error) throw error; }
+  catch(e){ msg.style.color = '#FFD9D9'; msg.textContent = e.message || 'Google sign-in failed — is it enabled in Supabase?'; }
+});
+document.getElementById('as-facebook-btn').addEventListener('click', async ()=>{
+  const msg = document.getElementById('as-msg');
+  if(!CONFIGURED || !db){ msg.style.color = '#FFD9D9'; msg.textContent = 'Supabase isn\'t connected yet — add your project keys in the code first.'; return; }
+  try{ const { error } = await db.auth.signInWithOAuth({ provider: 'facebook' }); if(error) throw error; }
+  catch(e){ msg.style.color = '#FFD9D9'; msg.textContent = e.message || 'Facebook sign-in failed — is it enabled in Supabase?'; }
+});
+
+async function submitAuthForm(){
+  const email = document.getElementById('as-email').value.trim();
+  const password = document.getElementById('as-password').value;
+  const msg = document.getElementById('as-msg');
+  const btn = document.getElementById('as-submit');
+  msg.textContent = '';
+  if(!email || !password){ msg.textContent = 'Enter both an email and a password.'; return; }
+  if(!CONFIGURED || !db){ msg.textContent = 'Supabase isn\'t connected yet — add your project keys in the code first.'; return; }
+
+  btn.disabled = true;
+  try{
+    if(isLoginMode){
+      const { data, error } = await db.auth.signInWithPassword({ email, password });
+      if(error) throw error;
+      currentUser = data.user;
+      mode = 'cloud';
+      try{ localStorage.setItem(AUTH_CHOICE_KEY, 'cloud'); }catch(e){}
+      await migrateGuestToCloud();
+      document.getElementById('authscreen').classList.add('hidden');
+      setStatusPill();
+      loadTransactions();
+      offerCurrencyChoiceIfNeeded();
+    }else{
+      const { data, error } = await db.auth.signUp({ email, password });
+      if(error) throw error;
+      if(data.session && data.user){
+        currentUser = data.user;
+        mode = 'cloud';
+        try{ localStorage.setItem(AUTH_CHOICE_KEY, 'cloud'); }catch(e){}
+        await migrateGuestToCloud();
+        document.getElementById('authscreen').classList.add('hidden');
+        setStatusPill();
+        loadTransactions();
+        offerCurrencyChoiceIfNeeded();
+      }else{
+        // Email confirmation is required before a session exists.
+        msg.style.color = '#fff';
+        msg.textContent = 'Check your email to confirm your account, then log in.';
+        setAuthMode(true);
+      }
+    }
+  }catch(e){
+    console.error(e);
+    msg.style.color = '#FFD9D9';
+    msg.textContent = e.message || 'Something went wrong — try again.';
+  }finally{
+    btn.disabled = false;
+  }
+}
+document.getElementById('as-submit').addEventListener('click', submitAuthForm);
+document.getElementById('as-password').addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ e.preventDefault(); submitAuthForm(); } });
+
+// Profile rows: Login (guest only) opens the sign-up/login screen;
+// Logout (cloud only) signs out and drops back to guest.
+document.getElementById('profile-login-row').addEventListener('click', ()=>{
+  closeProfileSheet();
+  setAuthMode(false);
+  document.getElementById('authscreen').classList.remove('hidden');
+});
+document.getElementById('profile-logout-row').addEventListener('click', async ()=>{
+  if(!confirm('Log out of ' + (currentUser ? currentUser.email : 'your account') + '?')) return;
+  try{ if(db) await db.auth.signOut(); }catch(e){}
+  mode = 'guest'; currentUser = null;
+  try{ localStorage.setItem(AUTH_CHOICE_KEY, 'guest'); }catch(e){}
+  setStatusPill();
+  closeProfileSheet();
+  loadTransactions();
+});
+
+// ---------- "sign in to sync" nudge (guests only, shown once) ----------
+function maybeShowSyncNudge(){
+  if(mode !== 'guest') return;
+  let shown = false;
+  try{ shown = localStorage.getItem(NUDGE_SHOWN_KEY) === '1'; }catch(e){}
+  if(shown) return;
+  try{ localStorage.setItem(NUDGE_SHOWN_KEY, '1'); }catch(e){}
+  document.getElementById('nudge-backdrop').classList.add('show');
+  document.getElementById('nudge-modal').classList.add('show');
+}
+function closeSyncNudge(){
+  document.getElementById('nudge-backdrop').classList.remove('show');
+  document.getElementById('nudge-modal').classList.remove('show');
+}
+document.getElementById('nudge-later-btn').addEventListener('click', closeSyncNudge);
+document.getElementById('nudge-backdrop').addEventListener('click', closeSyncNudge);
+document.getElementById('nudge-signin-btn').addEventListener('click', ()=>{
+  closeSyncNudge();
+  setAuthMode(false);
+  document.getElementById('authscreen').classList.remove('hidden');
+});
+
+// Decides guest vs. cloud once (after onboarding, or immediately if it was
+// already seen on a past visit), then loads the right data set. Guest is
+// now the automatic default — no forced choice screen — and people can
+// always sign in later from Profile.
+async function resolveAuthState(){
+  if(CONFIGURED && db){
+    try{
+      const { data } = await db.auth.getSession();
+      if(data && data.session && data.session.user){
+        mode = 'cloud';
+        currentUser = data.session.user;
+        setStatusPill();
+        loadTransactions();
+        await offerCurrencyChoiceIfNeeded();
+        return;
+      }
+    }catch(e){ console.error('Session check failed:', e); }
+  }
+  mode = 'guest';
+  try{ localStorage.setItem(AUTH_CHOICE_KEY, 'guest'); }catch(e){}
+  setStatusPill();
+  loadTransactions();
+  await offerCurrencyChoiceIfNeeded();
+}
 
 // ---------- init ----------
+const savedCurrency = loadSavedCurrency();
+if(savedCurrency) setCurrency(savedCurrency.code, savedCurrency.symbol, savedCurrency.name, {render:false});
 document.getElementById('f-when').value = defaultDatetimeLocal();
 renderCatGrid();
 tickClock();
 setInterval(tickClock, 15000);
 
 showView('home');
-renderAll(); // paints an immediate $0.00 balance before any network call resolves
-if(!CONFIGURED) showBanner();
-loadTransactions();
+renderAll(); // paints an immediate balance before any decision resolves
+if(skippedOnboarding){ resolveAuthState(); }
 </script>
 </body>
 </html>
