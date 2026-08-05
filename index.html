@@ -155,6 +155,7 @@
   .row .details{ flex:1; min-width:0; }
   .row .time{ font-size:11.5px; color:var(--muted); }
   .row .cat{ font-size:14.5px; font-weight:700; margin-top:1px; }
+  .row .note{ font-size:12.5px; color:var(--ink-soft); margin-top:1px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .row .date{ font-size:11.5px; color:var(--muted); margin-top:1px; }
   .row .right{ display:flex; align-items:center; gap:6px; flex-shrink:0; }
   .row .amt{ font-weight:700; font-size:14.5px; font-variant-numeric:tabular-nums; }
@@ -408,6 +409,32 @@
   }
   .hidden-el{ display:none !important; }
 
+  /* ---- Add-type picker (shown when tapping the + tab) ---- */
+  .picker-backdrop{
+    position:fixed; inset:0; background:rgba(27,29,41,0.45);
+    z-index:40; opacity:0; pointer-events:none; transition:opacity .2s ease;
+  }
+  .picker-backdrop.show{ opacity:1; pointer-events:auto; }
+  .picker-modal{
+    position:fixed; left:50%; top:50%; transform:translate(-50%,-50%) scale(0.96);
+    width:calc(100% - 48px); max-width:340px; z-index:41;
+    background:var(--card); border-radius:22px; padding:24px 22px;
+    box-shadow:0 20px 50px rgba(20,10,60,0.35);
+    opacity:0; pointer-events:none; transition:opacity .2s ease, transform .2s ease;
+    text-align:center;
+  }
+  .picker-modal.show{ opacity:1; pointer-events:auto; transform:translate(-50%,-50%) scale(1); }
+  .picker-modal h3{ font-size:16.5px; font-weight:800; margin:0 0 6px; }
+  .picker-modal p{ font-size:13px; color:var(--muted); line-height:1.5; margin:0 0 18px; }
+  .type-pick{
+    width:100%; padding:15px; border:none; border-radius:14px;
+    font-family:'Inter'; font-weight:700; font-size:14.5px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:10px;
+  }
+  .type-pick:last-child{ margin-bottom:0; }
+  .type-pick.income{ background:#E3F7EC; color:var(--income); }
+  .type-pick.expense{ background:#FDE8E8; color:var(--expense); }
+
   /* ---- Profile ---- */
   .profile-row{
     display:flex; align-items:center; justify-content:space-between;
@@ -564,6 +591,20 @@
   <button type="button" class="nudge-later" id="nudge-later-btn">Not now</button>
 </div>
 
+<div class="picker-backdrop" id="type-backdrop"></div>
+<div class="picker-modal" id="type-modal">
+  <h3>What would you like to add?</h3>
+  <p>Choose one to jump straight to it.</p>
+  <button type="button" class="type-pick income" id="pick-income-btn">
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+    Income / Savings
+  </button>
+  <button type="button" class="type-pick expense" id="pick-expense-btn">
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+    Expense
+  </button>
+</div>
+
 <div class="app">
 
   <header class="top">
@@ -715,8 +756,8 @@
 
     <form id="add-form">
       <div class="type-toggle">
-        <button type="button" id="type-expense" class="active expense">− Expense</button>
         <button type="button" id="type-income" class="income">+ Income / Savings</button>
+        <button type="button" id="type-expense" class="active expense">− Expense</button>
       </div>
 
       <label>Category</label>
@@ -847,6 +888,7 @@ const INCOME_CATS  = ['Salary','Business','Gift','Investment','Interest','Other'
 
 const fmt = (n) => `${SYMBOL}${Number(n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}`;
 const fmtSigned = (n, type) => `${type==='income' ? '+' : '−'}${fmt(Math.abs(n))}`;
+const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
 
 let transactions = []; // {id,type,category,note,amount,occurred_at}
@@ -982,6 +1024,7 @@ function rowHTML(t, dateStyle){
       <div class="details">
         <div class="time">${timeStr}</div>
         <div class="cat">${t.category}</div>
+        ${t.note ? `<div class="note">${escapeHtml(t.note)}</div>` : ''}
         <div class="date">${dateStr}</div>
       </div>
       <div class="right">
@@ -1091,7 +1134,8 @@ document.getElementById('home-view-all').addEventListener('click', ()=> showView
 const sheetEl = document.getElementById('add-sheet');
 const backdropEl = document.getElementById('sheet-backdrop');
 
-function openAddSheet(){
+function openAddSheet(type){
+  if(type){ setEntryType(type); }
   const amountEl = document.getElementById('f-amount');
   const noteEl = document.getElementById('f-note');
   document.getElementById('f-msg').textContent = '';
@@ -1109,7 +1153,22 @@ function closeAddSheet(){
   document.body.style.overflow = '';
 }
 
-document.getElementById('fab-add-btn').addEventListener('click', openAddSheet);
+// ---------- add-type picker (tapping the + tab asks Income/Savings vs Expense first) ----------
+const typeBackdropEl = document.getElementById('type-backdrop');
+const typeModalEl = document.getElementById('type-modal');
+function openTypePicker(){
+  typeBackdropEl.classList.add('show');
+  typeModalEl.classList.add('show');
+}
+function closeTypePicker(){
+  typeBackdropEl.classList.remove('show');
+  typeModalEl.classList.remove('show');
+}
+document.getElementById('fab-add-btn').addEventListener('click', openTypePicker);
+typeBackdropEl.addEventListener('click', closeTypePicker);
+document.getElementById('pick-income-btn').addEventListener('click', ()=>{ closeTypePicker(); openAddSheet('income'); });
+document.getElementById('pick-expense-btn').addEventListener('click', ()=>{ closeTypePicker(); openAddSheet('expense'); });
+
 document.getElementById('sheet-close').addEventListener('click', closeAddSheet);
 backdropEl.addEventListener('click', closeAddSheet);
 
@@ -1131,19 +1190,15 @@ document.getElementById('profile-close').addEventListener('click', closeProfileS
 profileBackdropEl.addEventListener('click', closeProfileSheet);
 document.getElementById('profile-currency-row').addEventListener('click', openCurrencyModal);
 
-// type toggle
-document.getElementById('type-expense').addEventListener('click', ()=>{
-  currentType='expense';
-  document.getElementById('type-expense').classList.add('active');
-  document.getElementById('type-income').classList.remove('active');
+// type toggle (inside the Add sheet itself, for switching after it's already open)
+function setEntryType(type){
+  currentType = type;
+  document.getElementById('type-expense').classList.toggle('active', type==='expense');
+  document.getElementById('type-income').classList.toggle('active', type==='income');
   renderCatGrid();
-});
-document.getElementById('type-income').addEventListener('click', ()=>{
-  currentType='income';
-  document.getElementById('type-income').classList.add('active');
-  document.getElementById('type-expense').classList.remove('active');
-  renderCatGrid();
-});
+}
+document.getElementById('type-expense').addEventListener('click', ()=> setEntryType('expense'));
+document.getElementById('type-income').addEventListener('click', ()=> setEntryType('income'));
 
 // submit — a plain function wired to the button's click AND to the Enter
 // key while typing, instead of relying on native <form> submission (which
