@@ -401,15 +401,24 @@
   .applock h3{ font-size:19px; font-weight:800; margin:0 0 8px; }
   .applock p{ font-size:13.5px; color:var(--muted); line-height:1.5; margin:0 0 22px; max-width:300px; }
 
+  .toast{
+    position:fixed; left:50%; bottom:110px; transform:translate(-50%,10px);
+    background:#1B1D29; color:#fff; padding:12px 22px; border-radius:14px;
+    font-size:13.5px; font-weight:600; opacity:0; pointer-events:none;
+    transition:opacity .25s ease, transform .25s ease; z-index:70;
+    box-shadow:0 12px 30px rgba(0,0,0,0.3); max-width:calc(100% - 48px); text-align:center;
+  }
+  .toast.show{ opacity:1; transform:translate(-50%,0); }
+
   /* ---- "sign in to sync" nudge ---- */
   .nudge-backdrop{
     position:fixed; inset:0; background:rgba(27,29,41,0.45);
-    z-index:40; opacity:0; pointer-events:none; transition:opacity .25s ease;
+    z-index:46; opacity:0; pointer-events:none; transition:opacity .25s ease;
   }
   .nudge-backdrop.show{ opacity:1; pointer-events:auto; }
   .nudge-modal{
     position:fixed; left:50%; top:50%; transform:translate(-50%,-50%) scale(0.96);
-    width:calc(100% - 48px); max-width:360px; z-index:41;
+    width:calc(100% - 48px); max-width:360px; z-index:47;
     background:var(--card); border-radius:22px; padding:26px 22px;
     box-shadow:0 20px 50px rgba(20,10,60,0.35);
     opacity:0; pointer-events:none; transition:opacity .2s ease, transform .2s ease;
@@ -609,6 +618,19 @@
   <button type="button" class="curr-yes" id="curr-yes">Yes, that's right</button>
   <button type="button" class="curr-change" id="curr-change-btn">Choose a different currency</button>
   <div class="curr-list" id="curr-list"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="nudge-backdrop" id="biolock-nudge-backdrop"></div>
+<div class="nudge-modal" id="biolock-nudge-modal">
+  <div class="nudge-icon">
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 018 0v3"/></svg>
+  </div>
+  <h3>Use fingerprint to unlock?</h3>
+  <p>Next time you open Passbook, you can verify with your fingerprint or device PIN instead of just landing straight in.</p>
+  <button type="button" class="nudge-yes" id="biolock-nudge-yes">Enable</button>
+  <button type="button" class="nudge-later" id="biolock-nudge-later">Not now</button>
 </div>
 
 <div class="nudge-backdrop" id="verify-email-backdrop"></div>
@@ -1690,16 +1712,20 @@ async function submitAuthForm(){
       setStatusPill();
       loadTransactions();
       offerCurrencyChoiceIfNeeded();
+      maybeOfferBiolockNudge();
     }else{
       const { data, error } = await db.auth.signUp({
         email, password,
         options: { data: { full_name: name } }
       });
       if(error) throw error;
+      console.log('[signUp diagnostic] identities:', data.user && data.user.identities, 'session:', !!data.session, 'full response:', data);
       // Supabase deliberately returns a "success" here (no error) even when
       // the email is already registered, to avoid leaking which emails
-      // exist. The tell is an empty identities array on the returned user.
-      if(data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0){
+      // exist. The tell is an empty (or missing) identities array on the
+      // returned user — but only when that account was already confirmed.
+      const identities = data.user && data.user.identities;
+      if(data.user && (!identities || identities.length === 0)){
         msg.style.color = '#fff';
         msg.textContent = 'That email is already registered — try logging in instead.';
         setAuthMode(true);
@@ -1715,6 +1741,7 @@ async function submitAuthForm(){
         setStatusPill();
         loadTransactions();
         offerCurrencyChoiceIfNeeded();
+        maybeOfferBiolockNudge();
       }else{
         // Email confirmation is required before a session exists.
         setAuthMode(true);
@@ -1734,6 +1761,16 @@ async function submitAuthForm(){
 document.getElementById('as-submit').addEventListener('click', submitAuthForm);
 document.getElementById('as-password').addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ e.preventDefault(); submitAuthForm(); } });
 
+let toastTimer = null;
+function showToast(message){
+  const el = document.getElementById('toast');
+  if(!el) return;
+  el.textContent = message;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>{ el.classList.remove('show'); }, 2200);
+}
+
 // Profile rows: Login (guest only) opens the sign-up/login screen;
 // Logout (cloud only) signs out and drops back to guest.
 document.getElementById('profile-login-row').addEventListener('click', ()=>{
@@ -1749,6 +1786,7 @@ document.getElementById('profile-logout-row').addEventListener('click', async ()
   setStatusPill();
   closeProfileSheet();
   loadTransactions();
+  showToast("You're logged out");
 });
 
 // ---------- "sign in to sync" nudge (guests only, shown once) ----------
@@ -1781,15 +1819,25 @@ document.getElementById('nudge-signin-btn').addEventListener('click', ()=>{
   document.getElementById('authscreen').classList.remove('hidden');
 });
 
-// ---------- Fingerprint / PIN app lock (WebAuthn platform authenticator) ----------
-// This doesn't talk to a server — it just asks the device's own fingerprint/
-// face/PIN prompt to confirm it's still you before showing your data again.
-// The credential id is stored locally per account, on this device only.
+// ---------- Fingerprint / PIN app lock ----------
+// Two backends, auto-detected:
+// - Inside the Median-wrapped APK: uses Median's native JS Bridge
+//   (median.auth.*), which talks to real Android BiometricPrompt. Requires
+//   the "Face ID/Touch ID Android Biometric" Native Plugin to be added to
+//   the app in the Median dashboard — otherwise window.median.auth won't exist.
+// - In a normal browser: uses the WebAuthn platform authenticator instead.
+// Either way this doesn't talk to a server — it just confirms it's still
+// you on this device before showing your data again.
 const BIOLOCK_KEY_PREFIX = 'passbook_biolock_';
 function bufToB64(buf){ return btoa(String.fromCharCode(...new Uint8Array(buf))); }
 function b64ToBuf(b64){ return Uint8Array.from(atob(b64), c=>c.charCodeAt(0)); }
+function isMedianAuth(){ return typeof median !== 'undefined' && median && median.auth; }
 async function bioSupported(){
   try{
+    if(isMedianAuth()){
+      const data = await median.auth.status({ minimumAndroidBiometric:'strong' });
+      return !!(data && data.hasTouchId);
+    }
     return !!(window.PublicKeyCredential && await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable());
   }catch(e){ return false; }
 }
@@ -1805,6 +1853,12 @@ function clearStoredCred(userId){
 async function enableBiometricLock(){
   if(!currentUser) return false;
   try{
+    if(isMedianAuth()){
+      const data = await median.auth.save({ secret: 'passbook-lock', minimumAndroidBiometric:'strong' });
+      if(!data || !data.success) return false;
+      setStoredCred(currentUser.id, 'median');
+      return true;
+    }
     const challenge = crypto.getRandomValues(new Uint8Array(32));
     const cred = await navigator.credentials.create({
       publicKey: {
@@ -1830,6 +1884,9 @@ async function enableBiometricLock(){
 }
 function disableBiometricLock(){
   if(!currentUser) return;
+  if(isMedianAuth()){
+    try{ median.auth.delete({}); }catch(e){}
+  }
   clearStoredCred(currentUser.id);
 }
 async function verifyBiometric(){
@@ -1837,6 +1894,10 @@ async function verifyBiometric(){
   const stored = getStoredCred(currentUser.id);
   if(!stored) return true; // nothing to verify against
   try{
+    if(isMedianAuth()){
+      const data = await median.auth.get({ minimumAndroidBiometric:'strong', prompt:"Verify it's you to unlock Passbook", callbackOnCancel:1 });
+      return !!(data && data.success);
+    }
     const challenge = crypto.getRandomValues(new Uint8Array(32));
     const assertion = await navigator.credentials.get({
       publicKey: {
@@ -1876,6 +1937,34 @@ document.getElementById('biolock-toggle').addEventListener('click', async ()=>{
     if(!ok){ alert("Couldn't set up fingerprint/PIN lock on this device. Make sure your device has a fingerprint, face unlock, or screen lock set up."); }
   }
   updateBiolockRow();
+});
+
+// Offers fingerprint/PIN lock right after a successful login or signup —
+// same moment most apps ask — instead of only being tucked away in Profile.
+// Shown at most once per account per device.
+const BIOLOCK_NUDGE_SEEN_PREFIX = 'passbook_biolock_nudge_seen_';
+async function maybeOfferBiolockNudge(){
+  if(mode !== 'cloud' || !currentUser) return;
+  if(getStoredCred(currentUser.id)) return; // already enabled
+  let seen = false;
+  try{ seen = localStorage.getItem(BIOLOCK_NUDGE_SEEN_PREFIX + currentUser.id) === '1'; }catch(e){}
+  if(seen) return;
+  if(!(await bioSupported())) return;
+  document.getElementById('biolock-nudge-backdrop').classList.add('show');
+  document.getElementById('biolock-nudge-modal').classList.add('show');
+}
+function closeBiolockNudge(){
+  document.getElementById('biolock-nudge-backdrop').classList.remove('show');
+  document.getElementById('biolock-nudge-modal').classList.remove('show');
+  try{ if(currentUser) localStorage.setItem(BIOLOCK_NUDGE_SEEN_PREFIX + currentUser.id, '1'); }catch(e){}
+}
+document.getElementById('biolock-nudge-backdrop').addEventListener('click', closeBiolockNudge);
+document.getElementById('biolock-nudge-later').addEventListener('click', closeBiolockNudge);
+document.getElementById('biolock-nudge-yes').addEventListener('click', async ()=>{
+  const ok = await enableBiometricLock();
+  updateBiolockRow();
+  if(!ok){ alert("Couldn't set up fingerprint/PIN lock on this device. Make sure your device has a fingerprint, face unlock, or screen lock set up."); }
+  closeBiolockNudge();
 });
 
 // ---------- App PIN (syncs via Supabase — works the same on any device) ----------
@@ -2017,6 +2106,7 @@ document.getElementById('applock-logout-btn').addEventListener('click', async ()
   setStatusPill();
   hideAppLock();
   loadTransactions();
+  showToast("You're logged out");
 });
 
 // Decides guest vs. cloud once (after onboarding, or immediately if it was
@@ -2040,6 +2130,7 @@ async function resolveAuthState(){
         }
         loadTransactions();
         await offerCurrencyChoiceIfNeeded();
+        maybeOfferBiolockNudge();
         return;
       }
     }catch(e){ console.error('Session check failed:', e); }
