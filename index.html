@@ -99,9 +99,12 @@
     color:#fff;
     overflow:hidden;
   }
-  .hero .row1{ display:flex; justify-content:space-between; align-items:flex-start; position:relative; z-index:2; }
+  .hero .row1{ display:flex; justify-content:space-between; align-items:flex-start; gap:12px; position:relative; z-index:2; }
+  .hero .row1 > .bal-col{ min-width:0; flex:1 1 auto; }
   .hero .label{ font-size:12.5px; letter-spacing:0.14em; text-transform:uppercase; opacity:0.75; font-weight:600; }
-  .hero .amount{ font-size:50px; font-weight:800; margin-top:8px; letter-spacing:-0.8px; font-variant-numeric:tabular-nums; }
+  .hero .amount{ font-size:34px; font-weight:800; margin-top:8px; letter-spacing:-0.6px; font-variant-numeric:tabular-nums; color:#fff; word-break:break-word; }
+  .hero .amount.positive{ color:#4ADE80; }
+  .hero .amount.negative{ color:#FCA5A5; }
   .hero .wallet{
     width:52px; height:52px; border-radius:16px; background:var(--card);
     box-shadow:0 8px 18px rgba(20,10,60,0.18);
@@ -593,6 +596,16 @@
   <div class="curr-list" id="curr-list"></div>
 </div>
 
+<div class="nudge-backdrop" id="verify-email-backdrop"></div>
+<div class="nudge-modal" id="verify-email-modal">
+  <div class="nudge-icon">
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>
+  </div>
+  <h3>Verify your email</h3>
+  <p>We've sent a confirmation link to <strong id="verify-email-address"></strong>. Please check your inbox and verify your account before logging in.</p>
+  <button type="button" class="nudge-yes" id="verify-email-ok-btn">OK</button>
+</div>
+
 <div class="nudge-backdrop" id="nudge-backdrop"></div>
 <div class="nudge-modal" id="nudge-modal">
   <div class="nudge-icon">
@@ -643,7 +656,7 @@
     <section id="view-home" class="view">
       <div class="hero">
         <div class="row1">
-          <div>
+          <div class="bal-col">
             <div class="label">Balance</div>
             <div class="amount" id="home-balance">$0.00</div>
           </div>
@@ -910,7 +923,7 @@ function catIcon(cat, size){
 const EXPENSE_CATS = ['Food','Transport','Bills','Shopping','Health','Entertainment','Education','Other'];
 const INCOME_CATS  = ['Salary','Business','Gift','Investment','Interest','Other'];
 
-const fmt = (n) => `${SYMBOL}${Number(n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}`;
+const fmt = (n) => `${SYMBOL}${Number(n).toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:0})}`;
 const fmtSigned = (n, type) => `${type==='income' ? '+' : '−'}${fmt(Math.abs(n))}`;
 const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
@@ -1060,7 +1073,10 @@ function rowHTML(t, dateStyle){
 
 function renderHome(){
   const all = totals(transactions);
-  document.getElementById('home-balance').textContent = fmt(all.net);
+  const balEl = document.getElementById('home-balance');
+  balEl.textContent = fmt(all.net);
+  balEl.classList.toggle('positive', all.net > 0);
+  balEl.classList.toggle('negative', all.net < 0);
 
   const today = rangeFor('day', new Date());
   const todays = transactions.filter(t=>inRange(t, today.start, today.end));
@@ -1566,6 +1582,7 @@ function setAuthMode(loginMode){
   document.getElementById('as-switch-btn').textContent = loginMode ? 'Sign up' : 'Log in';
   document.getElementById('as-msg').textContent = '';
   document.getElementById('as-name-field').style.display = loginMode ? 'none' : '';
+  document.getElementById('as-password').setAttribute('autocomplete', loginMode ? 'off' : 'new-password');
   // Never leave a previously-typed email/password sitting in the form —
   // closing the app shouldn't bring back what was last typed here.
   document.getElementById('as-name').value = '';
@@ -1639,9 +1656,10 @@ async function submitAuthForm(){
         offerCurrencyChoiceIfNeeded();
       }else{
         // Email confirmation is required before a session exists.
-        msg.style.color = '#fff';
-        msg.textContent = 'Check your email to confirm your account, then log in.';
         setAuthMode(true);
+        document.getElementById('verify-email-address').textContent = email;
+        document.getElementById('verify-email-backdrop').classList.add('show');
+        document.getElementById('verify-email-modal').classList.add('show');
       }
     }
   }catch(e){
@@ -1686,6 +1704,14 @@ function closeSyncNudge(){
   document.getElementById('nudge-backdrop').classList.remove('show');
   document.getElementById('nudge-modal').classList.remove('show');
 }
+document.getElementById('verify-email-ok-btn').addEventListener('click', ()=>{
+  document.getElementById('verify-email-backdrop').classList.remove('show');
+  document.getElementById('verify-email-modal').classList.remove('show');
+});
+document.getElementById('verify-email-backdrop').addEventListener('click', ()=>{
+  document.getElementById('verify-email-backdrop').classList.remove('show');
+  document.getElementById('verify-email-modal').classList.remove('show');
+});
 document.getElementById('nudge-later-btn').addEventListener('click', closeSyncNudge);
 document.getElementById('nudge-backdrop').addEventListener('click', closeSyncNudge);
 document.getElementById('nudge-signin-btn').addEventListener('click', ()=>{
