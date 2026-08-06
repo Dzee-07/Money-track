@@ -386,6 +386,21 @@
   .curr-list .sym{ width:26px; text-align:center; font-weight:700; color:var(--purple); flex-shrink:0; }
   .curr-list .check{ margin-left:auto; color:var(--purple); font-weight:800; }
 
+  /* ---- App lock (fingerprint/PIN) ---- */
+  .applock{
+    position:fixed; inset:0; z-index:200; background:var(--bg);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; padding:32px;
+  }
+  .applock.hidden{ display:none; }
+  .applock-icon{
+    width:64px; height:64px; border-radius:20px; background:var(--banner-bg);
+    display:flex; align-items:center; justify-content:center; color:var(--purple);
+    margin-bottom:18px;
+  }
+  .applock h3{ font-size:19px; font-weight:800; margin:0 0 8px; }
+  .applock p{ font-size:13.5px; color:var(--muted); line-height:1.5; margin:0 0 22px; max-width:300px; }
+
   /* ---- "sign in to sync" nudge ---- */
   .nudge-backdrop{
     position:fixed; inset:0; background:rgba(27,29,41,0.45);
@@ -826,11 +841,29 @@
       <span class="pr-label">Change currency</span>
       <span class="pr-value"><span id="profile-currency-label">$ USD</span> ›</span>
     </button>
+    <div class="profile-row hidden-el" id="profile-biolock-row" style="cursor:default;">
+      <span class="pr-label">Fingerprint / PIN lock</span>
+      <span class="pr-value">
+        <button type="button" id="biolock-toggle" role="switch" aria-checked="false"
+          style="width:44px; height:26px; border-radius:20px; border:none; background:var(--line); position:relative; cursor:pointer; padding:0; transition:background .2s ease;">
+          <span id="biolock-knob" style="position:absolute; top:3px; left:3px; width:20px; height:20px; border-radius:50%; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,0.3); transition:transform .2s ease;"></span>
+        </button>
+      </span>
+    </div>
     <button type="button" class="profile-row" id="profile-logout-row">
       <span class="pr-label" style="color:var(--expense);">Logout</span>
       <span class="pr-value">›</span>
     </button>
   </div>
+<div class="applock hidden" id="applock-screen">
+  <div class="applock-icon">
+    <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 018 0v3"/></svg>
+  </div>
+  <h3>Passbook is locked</h3>
+  <p id="applock-msg">Verify it's you with your fingerprint or device PIN to continue.</p>
+  <button type="button" class="nudge-yes" id="applock-unlock-btn" style="max-width:280px;">Unlock</button>
+  <button type="button" class="link" id="applock-logout-btn" style="margin-top:16px; background:none; border:none; color:var(--muted); font-size:13px; cursor:pointer;">Log out instead</button>
+</div>
 
 </div>
 
@@ -890,6 +923,7 @@ function setStatusPill(){
   if(logoutRow) logoutRow.classList.toggle('hidden-el', !isCloud);
   if(acctLabel) acctLabel.textContent = isCloud ? displayNameFor(currentUser) : '';
   if(headerLabel) headerLabel.textContent = isCloud ? headerNameFor(currentUser) : '';
+  updateBiolockRow();
 }
 
 let SYMBOL = '$';
@@ -1720,6 +1754,132 @@ document.getElementById('nudge-signin-btn').addEventListener('click', ()=>{
   document.getElementById('authscreen').classList.remove('hidden');
 });
 
+// ---------- Fingerprint / PIN app lock (WebAuthn platform authenticator) ----------
+// This doesn't talk to a server — it just asks the device's own fingerprint/
+// face/PIN prompt to confirm it's still you before showing your data again.
+// The credential id is stored locally per account, on this device only.
+const BIOLOCK_KEY_PREFIX = 'passbook_biolock_';
+function bufToB64(buf){ return btoa(String.fromCharCode(...new Uint8Array(buf))); }
+function b64ToBuf(b64){ return Uint8Array.from(atob(b64), c=>c.charCodeAt(0)); }
+async function bioSupported(){
+  try{
+    return !!(window.PublicKeyCredential && await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable());
+  }catch(e){ return false; }
+}
+function getStoredCred(userId){
+  try{ return localStorage.getItem(BIOLOCK_KEY_PREFIX + userId); }catch(e){ return null; }
+}
+function setStoredCred(userId, credIdB64){
+  try{ localStorage.setItem(BIOLOCK_KEY_PREFIX + userId, credIdB64); }catch(e){}
+}
+function clearStoredCred(userId){
+  try{ localStorage.removeItem(BIOLOCK_KEY_PREFIX + userId); }catch(e){}
+}
+async function enableBiometricLock(){
+  if(!currentUser) return false;
+  try{
+    const challenge = crypto.getRandomValues(new Uint8Array(32));
+    const cred = await navigator.credentials.create({
+      publicKey: {
+        challenge,
+        rp: { name: 'Passbook' },
+        user: {
+          id: new TextEncoder().encode(currentUser.id),
+          name: currentUser.email || 'user',
+          displayName: headerNameFor(currentUser) || currentUser.email || 'User'
+        },
+        pubKeyCredParams: [{ type:'public-key', alg:-7 }, { type:'public-key', alg:-257 }],
+        authenticatorSelection: { authenticatorAttachment:'platform', userVerification:'required' },
+        timeout: 60000
+      }
+    });
+    if(!cred) return false;
+    setStoredCred(currentUser.id, bufToB64(cred.rawId));
+    return true;
+  }catch(e){
+    console.error('Enable biometric lock failed:', e);
+    return false;
+  }
+}
+function disableBiometricLock(){
+  if(!currentUser) return;
+  clearStoredCred(currentUser.id);
+}
+async function verifyBiometric(){
+  if(!currentUser) return true;
+  const stored = getStoredCred(currentUser.id);
+  if(!stored) return true; // nothing to verify against
+  try{
+    const challenge = crypto.getRandomValues(new Uint8Array(32));
+    const assertion = await navigator.credentials.get({
+      publicKey: {
+        challenge,
+        allowCredentials: [{ id: b64ToBuf(stored), type:'public-key' }],
+        userVerification: 'required',
+        timeout: 60000
+      }
+    });
+    return !!assertion;
+  }catch(e){
+    console.error('Biometric verification failed:', e);
+    return false;
+  }
+}
+async function updateBiolockRow(){
+  const row = document.getElementById('profile-biolock-row');
+  const toggle = document.getElementById('biolock-toggle');
+  const knob = document.getElementById('biolock-knob');
+  if(!row || !toggle) return;
+  const isCloud = mode === 'cloud' && currentUser;
+  const supported = isCloud ? await bioSupported() : false;
+  row.classList.toggle('hidden-el', !supported);
+  if(!supported) return;
+  const on = !!getStoredCred(currentUser.id);
+  toggle.setAttribute('aria-checked', String(on));
+  toggle.style.background = on ? 'var(--purple)' : 'var(--line)';
+  knob.style.transform = on ? 'translateX(18px)' : 'translateX(0)';
+}
+document.getElementById('biolock-toggle').addEventListener('click', async ()=>{
+  const toggle = document.getElementById('biolock-toggle');
+  const currentlyOn = toggle.getAttribute('aria-checked') === 'true';
+  if(currentlyOn){
+    disableBiometricLock();
+  }else{
+    const ok = await enableBiometricLock();
+    if(!ok){ alert("Couldn't set up fingerprint/PIN lock on this device. Make sure your device has a fingerprint, face unlock, or screen lock set up."); }
+  }
+  updateBiolockRow();
+});
+
+
+function showAppLock(){
+  document.getElementById('applock-msg').textContent = "Verify it's you with your fingerprint or device PIN to continue.";
+  document.getElementById('applock-screen').classList.remove('hidden');
+}
+function hideAppLock(){
+  document.getElementById('applock-screen').classList.add('hidden');
+}
+document.getElementById('applock-unlock-btn').addEventListener('click', async ()=>{
+  const ok = await verifyBiometric();
+  if(ok){
+    hideAppLock();
+    loadTransactions();
+    await offerCurrencyChoiceIfNeeded();
+  }else{
+    document.getElementById('applock-msg').textContent = "Couldn't verify — try again, or log out below.";
+  }
+});
+document.getElementById('applock-logout-btn').addEventListener('click', async ()=>{
+  if(!confirm('Log out of ' + (currentUser ? currentUser.email : 'your account') + '?')) return;
+  try{ if(db) await db.auth.signOut(); }catch(e){}
+  if(currentUser) clearStoredCred(currentUser.id);
+  mode = 'guest'; currentUser = null;
+  try{ localStorage.setItem(AUTH_CHOICE_KEY, 'guest'); }catch(e){}
+  setStatusPill();
+  hideAppLock();
+  loadTransactions();
+});
+
 // Decides guest vs. cloud once (after onboarding, or immediately if it was
 // already seen on a past visit), then loads the right data set. Guest is
 // now the automatic default — no forced choice screen — and people can
@@ -1732,6 +1892,10 @@ async function resolveAuthState(){
         mode = 'cloud';
         currentUser = data.session.user;
         setStatusPill();
+        if(getStoredCred(currentUser.id)){
+          showAppLock();
+          return;
+        }
         loadTransactions();
         await offerCurrencyChoiceIfNeeded();
         return;
