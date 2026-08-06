@@ -632,6 +632,20 @@
   <button type="button" class="nudge-later" id="nudge-later-btn">Not now</button>
 </div>
 
+<div class="picker-backdrop" id="pin-backdrop"></div>
+<div class="picker-modal" id="pin-modal">
+  <h3 id="pin-modal-title">Set an app PIN</h3>
+  <p id="pin-modal-sub">Choose a 4–6 digit PIN. This unlocks the app the same way on any device, since it's checked against your account instead of this phone's fingerprint sensor.</p>
+  <input type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="6" id="pin-input-new" placeholder="New PIN"
+    style="width:100%; padding:14px; border-radius:12px; border:1px solid var(--line); font-size:16px; letter-spacing:4px; text-align:center; margin-bottom:10px; font-family:'Inter';">
+  <input type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="6" id="pin-input-confirm" placeholder="Confirm PIN"
+    style="width:100%; padding:14px; border-radius:12px; border:1px solid var(--line); font-size:16px; letter-spacing:4px; text-align:center; margin-bottom:6px; font-family:'Inter';">
+  <div id="pin-modal-msg" style="font-size:12.5px; color:#EF4444; min-height:16px; margin-bottom:10px;"></div>
+  <button type="button" class="nudge-yes" id="pin-save-btn">Save PIN</button>
+  <button type="button" class="nudge-later hidden-el" id="pin-remove-btn" style="color:#EF4444;">Remove PIN</button>
+  <button type="button" class="nudge-later" id="pin-cancel-btn">Cancel</button>
+</div>
+
 <div class="picker-backdrop" id="type-backdrop"></div>
 <div class="picker-modal" id="type-modal">
   <h3>What would you like to add?</h3>
@@ -842,7 +856,7 @@
       <span class="pr-value"><span id="profile-currency-label">$ USD</span> ›</span>
     </button>
     <div class="profile-row hidden-el" id="profile-biolock-row" style="cursor:default;">
-      <span class="pr-label">Fingerprint / PIN lock</span>
+      <span class="pr-label">Fingerprint lock (this device)</span>
       <span class="pr-value">
         <button type="button" id="biolock-toggle" role="switch" aria-checked="false"
           style="width:44px; height:26px; border-radius:20px; border:none; background:var(--line); position:relative; cursor:pointer; padding:0; transition:background .2s ease;">
@@ -850,6 +864,10 @@
         </button>
       </span>
     </div>
+    <button type="button" class="profile-row hidden-el" id="profile-pin-row">
+      <span class="pr-label">App PIN (any device)</span>
+      <span class="pr-value"><span id="profile-pin-status">Off</span> ›</span>
+    </button>
     <button type="button" class="profile-row" id="profile-logout-row">
       <span class="pr-label" style="color:var(--expense);">Logout</span>
       <span class="pr-value">›</span>
@@ -862,7 +880,13 @@
   <h3>Passbook is locked</h3>
   <p id="applock-msg">Verify it's you with your fingerprint or device PIN to continue.</p>
   <button type="button" class="nudge-yes" id="applock-unlock-btn" style="max-width:280px;">Unlock</button>
-  <button type="button" class="link" id="applock-logout-btn" style="margin-top:16px; background:none; border:none; color:var(--muted); font-size:13px; cursor:pointer;">Log out instead</button>
+  <div id="applock-pin-wrap" class="hidden-el" style="width:100%; max-width:280px; margin-top:16px;">
+    <input type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="6" id="applock-pin-input" placeholder="Enter PIN"
+      style="width:100%; padding:14px; border-radius:12px; border:1px solid var(--line); font-size:16px; letter-spacing:4px; text-align:center; font-family:'Inter'; margin-bottom:10px;">
+    <button type="button" class="nudge-yes" id="applock-pin-submit">Continue</button>
+  </div>
+  <button type="button" class="link" id="applock-use-pin-btn" style="margin-top:14px; background:none; border:none; color:var(--purple); font-size:13px; font-weight:700; cursor:pointer;">Use PIN instead</button>
+  <button type="button" class="link" id="applock-logout-btn" style="margin-top:10px; background:none; border:none; color:var(--muted); font-size:13px; cursor:pointer;">Log out instead</button>
 </div>
 
 </div>
@@ -889,6 +913,8 @@ const GUEST_KEY = 'passbook_guest_txns';
 const GUEST_ID_KEY = 'passbook_guest_next_id';
 let mode = null;          // 'guest' | 'cloud' — set once we know
 let currentUser = null;   // Supabase auth user, when in cloud mode
+let cloudPinHash = null;  // salted hash of the app PIN, fetched from user_settings
+let cloudPinSalt = null;
 
 function readGuestTxns(){
   try{ return JSON.parse(localStorage.getItem(GUEST_KEY) || '[]'); }
@@ -924,6 +950,7 @@ function setStatusPill(){
   if(acctLabel) acctLabel.textContent = isCloud ? displayNameFor(currentUser) : '';
   if(headerLabel) headerLabel.textContent = isCloud ? headerNameFor(currentUser) : '';
   updateBiolockRow();
+  updatePinRow();
 }
 
 let SYMBOL = '$';
@@ -1851,9 +1878,106 @@ document.getElementById('biolock-toggle').addEventListener('click', async ()=>{
   updateBiolockRow();
 });
 
+// ---------- App PIN (syncs via Supabase — works the same on any device) ----------
+async function hashPin(pin, saltB64){
+  const enc = new TextEncoder().encode(saltB64 + ':' + pin);
+  const digest = await crypto.subtle.digest('SHA-256', enc);
+  return bufToB64(digest);
+}
+async function fetchCloudPinStatus(){
+  if(!currentUser) return false;
+  try{
+    const { data, error } = await db.from('user_settings').select('pin_hash,pin_salt').eq('user_id', currentUser.id).maybeSingle();
+    if(error) throw error;
+    cloudPinHash = (data && data.pin_hash) || null;
+    cloudPinSalt = (data && data.pin_salt) || null;
+    return !!cloudPinHash;
+  }catch(e){
+    console.error('Could not check app PIN status:', e);
+    return false;
+  }
+}
+async function setCloudPin(pin){
+  const salt = bufToB64(crypto.getRandomValues(new Uint8Array(16)));
+  const hash = await hashPin(pin, salt);
+  const { error } = await db.from('user_settings').upsert({ user_id: currentUser.id, pin_hash: hash, pin_salt: salt });
+  if(error) throw error;
+  cloudPinHash = hash; cloudPinSalt = salt;
+}
+async function clearCloudPin(){
+  const { error } = await db.from('user_settings').upsert({ user_id: currentUser.id, pin_hash: null, pin_salt: null });
+  if(error) throw error;
+  cloudPinHash = null; cloudPinSalt = null;
+}
+async function verifyCloudPin(pin){
+  if(!cloudPinHash || !cloudPinSalt) return false;
+  const hash = await hashPin(pin, cloudPinSalt);
+  return hash === cloudPinHash;
+}
+function updatePinRow(){
+  const row = document.getElementById('profile-pin-row');
+  const status = document.getElementById('profile-pin-status');
+  if(!row) return;
+  const isCloud = mode === 'cloud' && currentUser;
+  row.classList.toggle('hidden-el', !isCloud);
+  if(status) status.textContent = cloudPinHash ? 'On' : 'Off';
+}
+function openPinModal(){
+  document.getElementById('pin-input-new').value = '';
+  document.getElementById('pin-input-confirm').value = '';
+  document.getElementById('pin-modal-msg').textContent = '';
+  document.getElementById('pin-modal-title').textContent = cloudPinHash ? 'Change your app PIN' : 'Set an app PIN';
+  document.getElementById('pin-remove-btn').classList.toggle('hidden-el', !cloudPinHash);
+  document.getElementById('pin-backdrop').classList.add('show');
+  document.getElementById('pin-modal').classList.add('show');
+}
+function closePinModal(){
+  document.getElementById('pin-backdrop').classList.remove('show');
+  document.getElementById('pin-modal').classList.remove('show');
+}
+document.getElementById('profile-pin-row').addEventListener('click', openPinModal);
+document.getElementById('pin-cancel-btn').addEventListener('click', closePinModal);
+document.getElementById('pin-backdrop').addEventListener('click', closePinModal);
+document.getElementById('pin-save-btn').addEventListener('click', async ()=>{
+  const a = document.getElementById('pin-input-new').value.trim();
+  const b = document.getElementById('pin-input-confirm').value.trim();
+  const msg = document.getElementById('pin-modal-msg');
+  if(!/^\d{4,6}$/.test(a)){ msg.textContent = 'PIN must be 4–6 digits.'; return; }
+  if(a !== b){ msg.textContent = "PINs don't match."; return; }
+  try{
+    await setCloudPin(a);
+    updatePinRow();
+    closePinModal();
+  }catch(e){
+    console.error(e);
+    msg.textContent = 'Could not save your PIN — try again.';
+  }
+});
+document.getElementById('pin-remove-btn').addEventListener('click', async ()=>{
+  if(!confirm('Remove your app PIN? You can still use fingerprint lock on devices where you set it up.')) return;
+  try{
+    await clearCloudPin();
+    updatePinRow();
+    closePinModal();
+  }catch(e){ console.error(e); alert('Could not remove your PIN — try again.'); }
+});
 
+
+let lockHasFingerprint = false;
+let lockHasPin = false;
+function proceedAfterUnlock(){
+  hideAppLock();
+  loadTransactions();
+  offerCurrencyChoiceIfNeeded();
+}
 function showAppLock(){
-  document.getElementById('applock-msg').textContent = "Verify it's you with your fingerprint or device PIN to continue.";
+  document.getElementById('applock-msg').textContent = lockHasFingerprint
+    ? "Verify it's you with your fingerprint or device PIN to continue."
+    : 'Enter your app PIN to continue.';
+  document.getElementById('applock-unlock-btn').classList.toggle('hidden-el', !lockHasFingerprint);
+  document.getElementById('applock-use-pin-btn').classList.toggle('hidden-el', !lockHasFingerprint || !lockHasPin);
+  document.getElementById('applock-pin-wrap').classList.toggle('hidden-el', lockHasFingerprint);
+  document.getElementById('applock-pin-input').value = '';
   document.getElementById('applock-screen').classList.remove('hidden');
 }
 function hideAppLock(){
@@ -1862,11 +1986,26 @@ function hideAppLock(){
 document.getElementById('applock-unlock-btn').addEventListener('click', async ()=>{
   const ok = await verifyBiometric();
   if(ok){
-    hideAppLock();
-    loadTransactions();
-    await offerCurrencyChoiceIfNeeded();
+    proceedAfterUnlock();
   }else{
-    document.getElementById('applock-msg').textContent = "Couldn't verify — try again, or log out below.";
+    document.getElementById('applock-msg').textContent = "Couldn't verify — try again" + (lockHasPin ? ', or use your PIN below.' : '.');
+  }
+});
+document.getElementById('applock-use-pin-btn').addEventListener('click', ()=>{
+  document.getElementById('applock-unlock-btn').classList.add('hidden-el');
+  document.getElementById('applock-use-pin-btn').classList.add('hidden-el');
+  document.getElementById('applock-pin-wrap').classList.remove('hidden-el');
+  document.getElementById('applock-msg').textContent = 'Enter your app PIN to continue.';
+});
+document.getElementById('applock-pin-submit').addEventListener('click', async ()=>{
+  const pin = document.getElementById('applock-pin-input').value.trim();
+  if(!pin){ return; }
+  const ok = await verifyCloudPin(pin);
+  if(ok){
+    proceedAfterUnlock();
+  }else{
+    document.getElementById('applock-msg').textContent = 'Wrong PIN — try again.';
+    document.getElementById('applock-pin-input').value = '';
   }
 });
 document.getElementById('applock-logout-btn').addEventListener('click', async ()=>{
@@ -1892,7 +2031,10 @@ async function resolveAuthState(){
         mode = 'cloud';
         currentUser = data.session.user;
         setStatusPill();
-        if(getStoredCred(currentUser.id)){
+        lockHasFingerprint = !!getStoredCred(currentUser.id);
+        lockHasPin = await fetchCloudPinStatus();
+        updatePinRow();
+        if(lockHasFingerprint || lockHasPin){
           showAppLock();
           return;
         }
