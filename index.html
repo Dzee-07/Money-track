@@ -6,8 +6,11 @@
 <meta name="theme-color" content="#5B4FE0" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<title>Eledge — savings & expenses</title>
+<title>Passbook — savings & expenses</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://unpkg.com">
+<link rel="preload" as="script" href="https://unpkg.com/@supabase/supabase-js@2.112.1">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
 <style>
   :root{
@@ -48,7 +51,7 @@
 
   /* ---- Header ---- */
   header.top{
-    padding:22px 20px 10px;
+    padding:22px 20px 0;
   }
   .brand{
     display:flex; align-items:center; justify-content:space-between;
@@ -89,20 +92,16 @@
   /* ---- Balance hero card ---- */
   .hero{
     position:relative;
-    margin-top:28px;
+    margin-top:22px;
     border-radius:26px;
-    padding:26px 24px 44px;
+    padding:30px 24px 52px;
     background:linear-gradient(135deg, #5B4FE0 0%, #9B7CF6 100%);
     color:#fff;
     overflow:hidden;
   }
   .hero .row1{ display:flex; justify-content:space-between; align-items:flex-start; position:relative; z-index:2; }
   .hero .label{ font-size:12.5px; letter-spacing:0.14em; text-transform:uppercase; opacity:0.75; font-weight:600; }
-  .hero .amount{
-    font-size:36px; font-weight:800; margin-top:8px; letter-spacing:-0.6px; font-variant-numeric:tabular-nums;
-    white-space:nowrap; max-width:100%;
-  }
-  .hero .amount.negative{ color:#FF8A8A; }
+  .hero .amount{ font-size:50px; font-weight:800; margin-top:8px; letter-spacing:-0.8px; font-variant-numeric:tabular-nums; }
   .hero .wallet{
     width:52px; height:52px; border-radius:16px; background:var(--card);
     box-shadow:0 8px 18px rgba(20,10,60,0.18);
@@ -249,6 +248,9 @@
     display:flex; justify-content:center;
     padding:0;
     z-index:10;
+    transform:translateZ(0);
+    -webkit-transform:translateZ(0);
+    will-change:transform;
   }
   nav.tabs .inner{
     width:100%; max-width:480px; display:flex; align-items:center;
@@ -413,34 +415,6 @@
   }
   .hidden-el{ display:none !important; }
 
-  /* ---- "verify your email" popup ---- */
-  .verify-backdrop{
-    position:fixed; inset:0; background:rgba(27,29,41,0.45);
-    z-index:46; opacity:0; pointer-events:none; transition:opacity .2s ease;
-  }
-  .verify-backdrop.show{ opacity:1; pointer-events:auto; }
-  .verify-modal{
-    position:fixed; left:50%; top:50%; transform:translate(-50%,-50%) scale(0.96);
-    width:calc(100% - 48px); max-width:340px; z-index:47;
-    background:var(--card); border-radius:22px; padding:26px 22px;
-    box-shadow:0 20px 50px rgba(20,10,60,0.35);
-    opacity:0; pointer-events:none; transition:opacity .2s ease, transform .2s ease;
-    text-align:center;
-  }
-  .verify-modal.show{ opacity:1; pointer-events:auto; transform:translate(-50%,-50%) scale(1); }
-  .verify-modal .verify-icon{
-    width:46px; height:46px; border-radius:14px; background:var(--banner-bg);
-    display:flex; align-items:center; justify-content:center; color:var(--purple);
-    margin:0 auto 14px;
-  }
-  .verify-modal h3{ font-size:17px; font-weight:800; margin:0 0 6px; }
-  .verify-modal p{ font-size:13px; color:var(--muted); line-height:1.6; margin:0 0 18px; }
-  .verify-modal p b{ color:var(--ink); }
-  .verify-ok{
-    width:100%; padding:14px; border:none; border-radius:14px; background:var(--purple);
-    color:#fff; font-family:'Inter'; font-weight:700; font-size:14.5px; cursor:pointer;
-  }
-
   /* ---- Add-type picker (shown when tapping the + tab) ---- */
   .picker-backdrop{
     position:fixed; inset:0; background:rgba(27,29,41,0.45);
@@ -467,30 +441,17 @@
   .type-pick.income{ background:#E3F7EC; color:var(--income); }
   .type-pick.expense{ background:#FDE8E8; color:var(--expense); }
 
-  /* ---- Profile dropdown (anchored under the profile button) ---- */
-  .dropdown-backdrop{
-    position:fixed; inset:0; z-index:34; background:transparent;
-    display:none;
-  }
-  .dropdown-backdrop.show{ display:block; }
-  .profile-dropdown{
-    position:absolute; top:76px; right:20px; z-index:35;
-    width:250px; max-width:calc(100% - 40px);
-    background:var(--card); border-radius:18px; padding:6px;
-    box-shadow:0 16px 36px rgba(41,34,97,0.22);
-    opacity:0; transform:translateY(-8px) scale(0.97); transform-origin:top right;
-    pointer-events:none; transition:opacity .15s ease, transform .15s ease;
-  }
-  .profile-dropdown.open{ opacity:1; transform:translateY(0) scale(1); pointer-events:auto; }
-  .profile-dropdown .profile-row{ padding:12px 10px; border-radius:10px; border-bottom:none; }
-  .profile-dropdown .profile-row:hover{ background:var(--bg); }
+  /* ---- Profile ---- */
   .profile-row{
-    display:flex; align-items:center; justify-content:space-between;
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
     padding:15px 4px; border-bottom:1px solid var(--line); cursor:pointer; background:none; border-left:none; border-right:none; border-top:none; width:100%; text-align:left; font-family:'Inter';
   }
   .profile-row:last-of-type{ border-bottom:none; }
-  .profile-row .pr-label{ font-size:14px; font-weight:600; color:var(--ink); }
-  .profile-row .pr-value{ font-size:13.5px; color:var(--muted); display:flex; align-items:center; gap:6px; }
+  .profile-row .pr-label{ font-size:14px; font-weight:600; color:var(--ink); flex-shrink:0; }
+  .profile-row .pr-value{
+    font-size:13.5px; color:var(--muted); display:flex; align-items:center; gap:6px;
+    min-width:0; max-width:65%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; justify-content:flex-end;
+  }
 
   /* ---- Guest / sign up / log in screen ---- */
   .authscreen{
@@ -588,13 +549,17 @@
     <h1 id="as-title">Sign up</h1>
     <p class="as-sub" id="as-sub">Create an account to save your entries to the cloud and pick up where you left off on any device.</p>
 
+    <div class="as-field" id="as-name-field">
+      <label>Name</label>
+      <input type="text" id="as-name" autocomplete="off" placeholder="Your name" />
+    </div>
     <div class="as-field">
       <label>Email</label>
-      <input type="email" id="as-email" autocomplete="email" placeholder="you@example.com" />
+      <input type="email" id="as-email" autocomplete="off" placeholder="you@example.com" />
     </div>
     <div class="as-field">
       <label>Password</label>
-      <input type="password" id="as-password" autocomplete="current-password" placeholder="At least 6 characters" />
+      <input type="password" id="as-password" autocomplete="new-password" placeholder="At least 6 characters" />
     </div>
     <div class="as-msg" id="as-msg"></div>
     <button type="button" class="as-primary" id="as-submit">Sign up</button>
@@ -634,19 +599,9 @@
     <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18a4 4 0 01-.6-7.96A5.5 5.5 0 0117 9.5 4 4 0 0117 18H7z"/></svg>
   </div>
   <h3>Sync your data online</h3>
-  <p>You're using Eledge as a guest — your entries only live on this device. Sign in so they follow you anywhere and never get lost.</p>
+  <p>You're using Passbook as a guest — your entries only live on this device. Sign in so they follow you anywhere and never get lost.</p>
   <button type="button" class="nudge-yes" id="nudge-signin-btn">Log in / Sign up</button>
   <button type="button" class="nudge-later" id="nudge-later-btn">Not now</button>
-</div>
-
-<div class="verify-backdrop" id="verify-backdrop"></div>
-<div class="verify-modal" id="verify-modal">
-  <div class="verify-icon">
-    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>
-  </div>
-  <h3>Verify your email</h3>
-  <p id="verify-msg">We've sent a confirmation link to your email. Please check your inbox and verify your account before logging in.</p>
-  <button type="button" class="verify-ok" id="verify-ok-btn">OK</button>
 </div>
 
 <div class="picker-backdrop" id="type-backdrop"></div>
@@ -670,11 +625,12 @@
       <div class="left">
         <div>
           <div class="eyebrow">Personal Ledger</div>
-          <h1>Eledge</h1>
+          <h1>Passbook</h1>
         </div>
       </div>
-      <div class="right" style="display:flex; align-items:center; gap:12px;">
-        <button type="button" class="icon-btn" id="profile-btn" aria-label="Profile">
+      <div class="right" style="display:flex; align-items:center; gap:10px; min-width:0;">
+        <div id="header-user-label" style="font-size:12.5px; font-weight:700; color:var(--ink-soft); max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-align:right;"></div>
+        <button type="button" class="icon-btn" id="profile-btn" aria-label="Profile" style="flex-shrink:0;">
           <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21a8 8 0 10-16 0"/><circle cx="12" cy="7" r="4"/></svg>
         </button>
       </div>
@@ -838,11 +794,16 @@
     </form>
   </div>
 
-  <div class="dropdown-backdrop" id="profile-backdrop"></div>
-  <div class="profile-dropdown" id="profile-sheet" role="menu" aria-label="Profile">
+  <div class="sheet-backdrop" id="profile-backdrop"></div>
+  <div class="sheet" id="profile-sheet" role="dialog" aria-modal="true" aria-label="Profile">
+    <div class="sheet-handle"></div>
+    <div class="section-head" style="margin-top:2px;">
+      <h2>Profile</h2>
+      <button type="button" class="link" id="profile-close">Close</button>
+    </div>
     <button type="button" class="profile-row" id="profile-login-row">
       <span class="pr-label">Login</span>
-      <span class="pr-value">Guest — tap to sync ›</span>
+      <span class="pr-value">Guest — tap to sync your data ›</span>
     </button>
     <div class="profile-row" id="profile-account-row" style="cursor:default;">
       <span class="pr-label">Account</span>
@@ -860,14 +821,14 @@
 
 </div>
 
-<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script src="https://unpkg.com/@supabase/supabase-js@2.112.1"></script>
 <script>
 
 // =========================================================
 // 1) PASTE YOUR SUPABASE PROJECT CREDENTIALS HERE
 // =========================================================
-const SUPABASE_URL = 'YOUR_SUPABASE_URL';
-const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+const SUPABASE_URL = 'https://gbpsvelgtewurmyalset.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_J6KUQa7nWUWqVTzvaWK2mg_QoYDBJfw';
 // =========================================================
 
 const CONFIGURED = !SUPABASE_URL.includes('YOUR_SUPABASE_URL') && !SUPABASE_ANON_KEY.includes('YOUR_SUPABASE_ANON_KEY');
@@ -896,16 +857,26 @@ function nextGuestId(){
   try{ localStorage.setItem(GUEST_ID_KEY, String(n+1)); }catch(e){}
   return 'guest-' + n;
 }
+function displayNameFor(user){
+  if(!user) return '';
+  return (user.user_metadata && user.user_metadata.full_name) || user.email || '';
+}
+function headerNameFor(user){
+  if(!user) return '';
+  return (user.user_metadata && user.user_metadata.full_name) || '';
+}
 function setStatusPill(){
   const isCloud = mode === 'cloud' && currentUser;
   const loginRow = document.getElementById('profile-login-row');
   const acctRow = document.getElementById('profile-account-row');
   const logoutRow = document.getElementById('profile-logout-row');
   const acctLabel = document.getElementById('profile-account-label');
+  const headerLabel = document.getElementById('header-user-label');
   if(loginRow) loginRow.classList.toggle('hidden-el', isCloud);
   if(acctRow) acctRow.classList.toggle('hidden-el', !isCloud);
   if(logoutRow) logoutRow.classList.toggle('hidden-el', !isCloud);
-  if(acctLabel) acctLabel.textContent = isCloud ? currentUser.email : '';
+  if(acctLabel) acctLabel.textContent = isCloud ? displayNameFor(currentUser) : '';
+  if(headerLabel) headerLabel.textContent = isCloud ? headerNameFor(currentUser) : '';
 }
 
 let SYMBOL = '$';
@@ -1089,10 +1060,7 @@ function rowHTML(t, dateStyle){
 
 function renderHome(){
   const all = totals(transactions);
-  const balanceEl = document.getElementById('home-balance');
-  balanceEl.textContent = fmt(all.net);
-  balanceEl.classList.toggle('negative', all.net < 0);
-  fitBalanceFont(balanceEl);
+  document.getElementById('home-balance').textContent = fmt(all.net);
 
   const today = rangeFor('day', new Date());
   const todays = transactions.filter(t=>inRange(t, today.start, today.end));
@@ -1103,20 +1071,6 @@ function renderHome(){
   const recent = transactions.slice(0,5);
   const el = document.getElementById('home-recent');
   el.innerHTML = recent.length ? recent.map(t=>rowHTML(t)).join('') : `<div class="empty">No entries yet. Tap the + button to add your first one.</div>`;
-}
-// Shrinks the balance font until it fits on one line, so very large (or very
-// negative) numbers never spill off the card.
-function fitBalanceFont(el){
-  const max = 36, min = 18;
-  let size = max;
-  el.style.fontSize = size + 'px';
-  const container = el.parentElement;
-  let guard = 0;
-  while(el.scrollWidth > container.clientWidth && size > min && guard < 20){
-    size -= 2;
-    el.style.fontSize = size + 'px';
-    guard++;
-  }
 }
 
 function renderHistory(){
@@ -1149,12 +1103,14 @@ function renderStats(){
 
   const renderBars = (containerId, type) => {
     const {entries, max} = build(type);
+    const total = entries.reduce((sum,[,amt])=>sum+amt, 0);
     const el = document.getElementById(containerId);
     if(!entries.length){ el.innerHTML = `<div class="empty">No ${type} recorded in this period.</div>`; return; }
     el.innerHTML = entries.map(([cat,amt])=>{
+      const pct = total ? Math.round(amt/total*100) : 0;
       return `
       <div class="bar-row">
-        <div class="top"><span class="name">${catIcon(cat,15)} ${cat}</span><span class="val">${fmt(amt)}</span></div>
+        <div class="top"><span class="name">${catIcon(cat,15)} ${cat}</span><span class="val">${pct}%</span></div>
         <div class="bar-track"><div class="bar-fill ${type}" style="width:${max? (amt/max*100):0}%"></div></div>
       </div>`;
     }).join('');
@@ -1242,20 +1198,23 @@ document.getElementById('pick-expense-btn').addEventListener('click', ()=>{ clos
 document.getElementById('sheet-close').addEventListener('click', closeAddSheet);
 backdropEl.addEventListener('click', closeAddSheet);
 
-// ---------- profile dropdown (anchored under the profile button) ----------
+// ---------- profile overlay sheet ----------
 const profileSheetEl = document.getElementById('profile-sheet');
 const profileBackdropEl = document.getElementById('profile-backdrop');
 function openProfileSheet(){
   profileSheetEl.classList.add('open');
-  profileBackdropEl.classList.add('show');
+  profileBackdropEl.classList.add('open');
+  document.body.style.overflow = 'hidden';
 }
 function closeProfileSheet(){
   profileSheetEl.classList.remove('open');
-  profileBackdropEl.classList.remove('show');
+  profileBackdropEl.classList.remove('open');
+  document.body.style.overflow = '';
 }
 document.getElementById('profile-btn').addEventListener('click', openProfileSheet);
+document.getElementById('profile-close').addEventListener('click', closeProfileSheet);
 profileBackdropEl.addEventListener('click', closeProfileSheet);
-document.getElementById('profile-currency-row').addEventListener('click', ()=>{ closeProfileSheet(); openCurrencyModal(); });
+document.getElementById('profile-currency-row').addEventListener('click', openCurrencyModal);
 
 // type toggle (inside the Add sheet itself, for switching after it's already open)
 function setEntryType(type){
@@ -1338,6 +1297,10 @@ function tickClock(){
   const now = new Date();
   const dateStr = now.toLocaleDateString(undefined,{weekday:'short', month:'short', day:'numeric'});
   const timeStr = now.toLocaleTimeString(undefined,{hour:'numeric', minute:'2-digit'});
+  const dEl = document.getElementById('header-date');
+  const tEl = document.getElementById('header-time');
+  if(dEl) dEl.textContent = dateStr;
+  if(tEl) tEl.textContent = timeStr;
   const hdEl = document.getElementById('hero-date');
   const htEl = document.getElementById('hero-time');
   if(hdEl) hdEl.textContent = dateStr;
@@ -1602,6 +1565,12 @@ function setAuthMode(loginMode){
   document.getElementById('as-switch-text').textContent = loginMode ? "Don't have an account?" : 'Already have an account?';
   document.getElementById('as-switch-btn').textContent = loginMode ? 'Sign up' : 'Log in';
   document.getElementById('as-msg').textContent = '';
+  document.getElementById('as-name-field').style.display = loginMode ? 'none' : '';
+  // Never leave a previously-typed email/password sitting in the form —
+  // closing the app shouldn't bring back what was last typed here.
+  document.getElementById('as-name').value = '';
+  document.getElementById('as-email').value = '';
+  document.getElementById('as-password').value = '';
 }
 document.getElementById('as-switch-btn').addEventListener('click', ()=> setAuthMode(!isLoginMode));
 document.getElementById('as-close').addEventListener('click', ()=> document.getElementById('authscreen').classList.add('hidden'));
@@ -1620,11 +1589,13 @@ document.getElementById('as-facebook-btn').addEventListener('click', async ()=>{
 });
 
 async function submitAuthForm(){
+  const name = isLoginMode ? '' : document.getElementById('as-name').value.trim();
   const email = document.getElementById('as-email').value.trim();
   const password = document.getElementById('as-password').value;
   const msg = document.getElementById('as-msg');
   const btn = document.getElementById('as-submit');
   msg.textContent = '';
+  if(!isLoginMode && !name){ msg.textContent = 'Enter your name.'; return; }
   if(!email || !password){ msg.textContent = 'Enter both an email and a password.'; return; }
   if(!CONFIGURED || !db){ msg.textContent = 'Supabase isn\'t connected yet — add your project keys in the code first.'; return; }
 
@@ -1632,13 +1603,7 @@ async function submitAuthForm(){
   try{
     if(isLoginMode){
       const { data, error } = await db.auth.signInWithPassword({ email, password });
-      if(error){
-        if(/email not confirmed/i.test(error.message || '')){
-          showVerifyPopup(email);
-          return;
-        }
-        throw error;
-      }
+      if(error) throw error;
       currentUser = data.user;
       mode = 'cloud';
       try{ localStorage.setItem(AUTH_CHOICE_KEY, 'cloud'); }catch(e){}
@@ -1648,8 +1613,21 @@ async function submitAuthForm(){
       loadTransactions();
       offerCurrencyChoiceIfNeeded();
     }else{
-      const { data, error } = await db.auth.signUp({ email, password });
+      const { data, error } = await db.auth.signUp({
+        email, password,
+        options: { data: { full_name: name } }
+      });
       if(error) throw error;
+      // Supabase deliberately returns a "success" here (no error) even when
+      // the email is already registered, to avoid leaking which emails
+      // exist. The tell is an empty identities array on the returned user.
+      if(data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0){
+        msg.style.color = '#fff';
+        msg.textContent = 'That email is already registered — try logging in instead.';
+        setAuthMode(true);
+        document.getElementById('as-email').value = email;
+        return;
+      }
       if(data.session && data.user){
         currentUser = data.user;
         mode = 'cloud';
@@ -1661,8 +1639,9 @@ async function submitAuthForm(){
         offerCurrencyChoiceIfNeeded();
       }else{
         // Email confirmation is required before a session exists.
+        msg.style.color = '#fff';
+        msg.textContent = 'Check your email to confirm your account, then log in.';
         setAuthMode(true);
-        showVerifyPopup(email);
       }
     }
   }catch(e){
@@ -1675,20 +1654,6 @@ async function submitAuthForm(){
 }
 document.getElementById('as-submit').addEventListener('click', submitAuthForm);
 document.getElementById('as-password').addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ e.preventDefault(); submitAuthForm(); } });
-
-// ---------- "verify your email" popup ----------
-function showVerifyPopup(email){
-  document.getElementById('verify-msg').innerHTML =
-    `We've sent a confirmation link to <b>${escapeHtml(email)}</b>. Please check your inbox and verify your account before logging in.`;
-  document.getElementById('verify-backdrop').classList.add('show');
-  document.getElementById('verify-modal').classList.add('show');
-}
-function closeVerifyPopup(){
-  document.getElementById('verify-backdrop').classList.remove('show');
-  document.getElementById('verify-modal').classList.remove('show');
-}
-document.getElementById('verify-ok-btn').addEventListener('click', closeVerifyPopup);
-document.getElementById('verify-backdrop').addEventListener('click', closeVerifyPopup);
 
 // Profile rows: Login (guest only) opens the sign-up/login screen;
 // Logout (cloud only) signs out and drops back to guest.
