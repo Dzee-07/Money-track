@@ -387,19 +387,28 @@
   .curr-list .check{ margin-left:auto; color:var(--purple); font-weight:800; }
 
   /* ---- App lock (fingerprint/PIN) ---- */
-  .applock{
-    position:fixed; inset:0; z-index:200; background:var(--bg);
-    display:flex; flex-direction:column; align-items:center; justify-content:center;
-    text-align:center; padding:32px;
+  .applock-backdrop{
+    position:fixed; inset:0; z-index:199; background:rgba(20,20,30,0.55);
+    backdrop-filter: blur(2px); opacity:0; pointer-events:none; transition:opacity .25s ease;
   }
+  .applock-backdrop.show{ opacity:1; pointer-events:auto; }
+  .applock{
+    position:fixed; left:0; right:0; bottom:0; z-index:200;
+    background:var(--card); border-radius:24px 24px 0 0;
+    display:flex; flex-direction:column; align-items:center;
+    text-align:center; padding:28px 28px calc(28px + var(--safe-b, 0px));
+    box-shadow:0 -10px 40px rgba(0,0,0,0.25);
+    transform:translateY(100%); transition:transform .3s cubic-bezier(.32,.72,0,1);
+  }
+  .applock.show{ transform:translateY(0); }
   .applock.hidden{ display:none; }
   .applock-icon{
-    width:64px; height:64px; border-radius:20px; background:var(--banner-bg);
+    width:56px; height:56px; border-radius:18px; background:var(--banner-bg);
     display:flex; align-items:center; justify-content:center; color:var(--purple);
-    margin-bottom:18px;
+    margin-bottom:16px;
   }
-  .applock h3{ font-size:19px; font-weight:800; margin:0 0 8px; }
-  .applock p{ font-size:13.5px; color:var(--muted); line-height:1.5; margin:0 0 22px; max-width:300px; }
+  .applock h3{ font-size:18px; font-weight:800; margin:0 0 6px; }
+  .applock p{ font-size:13.5px; color:var(--muted); line-height:1.5; margin:0 0 20px; max-width:300px; }
 
   .toast{
     position:fixed; left:50%; bottom:110px; transform:translate(-50%,10px);
@@ -895,7 +904,8 @@
       <span class="pr-value">›</span>
     </button>
   </div>
-<div class="applock hidden" id="applock-screen">
+<div class="applock-backdrop" id="applock-backdrop"></div>
+<div class="applock" id="applock-screen">
   <div class="applock-icon">
     <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 018 0v3"/></svg>
   </div>
@@ -2072,10 +2082,14 @@ function showAppLock(){
   document.getElementById('applock-use-pin-btn').classList.toggle('hidden-el', !lockHasFingerprint || !lockHasPin);
   document.getElementById('applock-pin-wrap').classList.toggle('hidden-el', lockHasFingerprint);
   document.getElementById('applock-pin-input').value = '';
-  document.getElementById('applock-screen').classList.remove('hidden');
+  document.getElementById('applock-backdrop').classList.add('show');
+  document.getElementById('applock-screen').classList.add('show');
+  document.body.style.overflow = 'hidden';
 }
 function hideAppLock(){
-  document.getElementById('applock-screen').classList.add('hidden');
+  document.getElementById('applock-backdrop').classList.remove('show');
+  document.getElementById('applock-screen').classList.remove('show');
+  document.body.style.overflow = '';
 }
 document.getElementById('applock-unlock-btn').addEventListener('click', async ()=>{
   const ok = await verifyBiometric();
