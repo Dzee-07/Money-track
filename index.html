@@ -1726,10 +1726,11 @@ async function submitAuthForm(){
       // returned user — but only when that account was already confirmed.
       const identities = data.user && data.user.identities;
       if(data.user && (!identities || identities.length === 0)){
-        msg.style.color = '#fff';
+        msg.style.color = '#FFD9D9';
         msg.textContent = 'That email is already registered — try logging in instead.';
-        setAuthMode(true);
-        document.getElementById('as-email').value = email;
+        // Deliberately NOT calling setAuthMode() here — it resets this very
+        // message back to blank and wipes the form. Stay on signup so the
+        // error is actually visible; the "Log in" link below still works.
         return;
       }
       if(data.session && data.user){
@@ -1742,12 +1743,16 @@ async function submitAuthForm(){
         loadTransactions();
         offerCurrencyChoiceIfNeeded();
         maybeOfferBiolockNudge();
-      }else{
+      }else if(data.user){
         // Email confirmation is required before a session exists.
         setAuthMode(true);
         document.getElementById('verify-email-address').textContent = email;
         document.getElementById('verify-email-backdrop').classList.add('show');
         document.getElementById('verify-email-modal').classList.add('show');
+      }else{
+        // Unexpected: no error thrown, but no user came back either.
+        msg.style.color = '#FFD9D9';
+        msg.textContent = "Something went wrong and your account wasn't created — please try again.";
       }
     }
   }catch(e){
